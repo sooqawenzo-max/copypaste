@@ -94,7 +94,9 @@ export default async function Home({ searchParams }: Props) {
     (query.file ? undefined : undefined);
   const content = current && user ? await readStoredFileText(current) : '';
   const locked = !user;
-  const onlineUsers = users.filter(isOnline).slice(0, 8);
+  const onlineUsers = users
+    .filter((entry) => isOnline(entry) || entry.id === user?.id)
+    .slice(0, 8);
 
   return (
     <>

@@ -324,6 +324,13 @@ button {
   color: #c9c9cc;
 }
 
+.profile-top-link {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .icon-btn {
   width: 34px;
   height: 34px;
@@ -379,6 +386,46 @@ button {
 .theme-toggle.russian-active .flag-stripes {
   opacity: 1;
   transform: scale(1) rotate(0deg);
+}
+
+.language-toggle {
+  min-width: 54px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid rgba(166, 228, 0, 0.22);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(166, 228, 0, 0.16), rgba(255, 255, 255, 0.035));
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.language-toggle small {
+  color: var(--green);
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.language-toggle:hover {
+  border-color: rgba(166, 228, 0, 0.44);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(166, 228, 0, 0.12);
+}
+
+html[data-theme="russian"] .language-toggle {
+  border-color: rgba(0, 57, 166, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(0, 57, 166, 0.13) 55%, rgba(213, 43, 30, 0.13));
+  color: #0039a6;
+}
+
+html[data-theme="russian"] .language-toggle small {
+  color: #d52b1e;
 }
 
 .search-pill {

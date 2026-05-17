@@ -6,6 +6,9 @@ import { ThemeToggle } from './ThemeToggle';
 import { CodePreview } from './CodePreview';
 import { SearchBox } from './SearchBox';
 import { LanguageToggle } from './LanguageToggle';
+import { CategoryNav } from './CategoryNav';
+import { LanguageText } from './LanguageText';
+import { OnlinePulse } from './OnlinePulse';
 
 export function Brand() {
   return (
@@ -21,15 +24,11 @@ export function Brand() {
 export function TopNav({ user }: { user: PublicUser | null }) {
   return (
     <nav className="top-nav">
+      <OnlinePulse enabled={Boolean(user)} />
       <div className="nav-inner">
         <div className="nav-left">
           <Brand />
-          <Link className="nav-link active" href="/?category=lua">
-            Lua
-          </Link>
-          <Link className="nav-link muted" href="/?category=config">
-            Config
-          </Link>
+          <CategoryNav />
           <Link className="nav-link muted" href="/snippets">
             Snippets
           </Link>
@@ -38,8 +37,8 @@ export function TopNav({ user }: { user: PublicUser | null }) {
           </Link>
         </div>
         <div className="nav-right">
-          <Link className="nav-link get-link" href={user ? '/admin' : '/login'}>
-            {user ? user.username : 'Login'}
+          <Link className="nav-link get-link profile-top-link" href={user ? `/u/${user.uid}` : '/login'}>
+            {user ? user.forumNick || user.username : <LanguageText ru="Войти" en="Login" />}
             <ExternalLink size={14} />
           </Link>
           <ThemeToggle />
