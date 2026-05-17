@@ -36,8 +36,8 @@ function normalizeCategory(category?: string): FileCategory {
 }
 
 function normalizeCategoryFilter(category?: string): CategoryFilter {
-  if (category === 'all') return 'all';
-  return normalizeCategory(category);
+  if (category === 'lua' || category === 'config') return category;
+  return 'all';
 }
 
 function categoryLabel(category: FileCategory) {

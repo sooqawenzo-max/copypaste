@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ExternalLink, Home, MessageCircle } from 'lucide-react';
+import { Home, MessageCircle } from 'lucide-react';
 import { PublicUser } from '@/lib/types';
 import { ThemeToggle } from './ThemeToggle';
 import { CodePreview } from './CodePreview';
+import { CategoryNav } from './CategoryNav';
 import { SearchBox } from './SearchBox';
 import { OnlinePulse } from './OnlinePulse';
 
@@ -25,12 +26,9 @@ export function TopNav({ user }: { user: PublicUser | null }) {
       <div className="nav-inner">
         <div className="nav-left">
           <Brand />
+          <CategoryNav />
         </div>
         <div className="nav-right">
-          <Link className="nav-link get-link profile-top-link" href={user ? `/u/${user.uid}` : '/login'}>
-            {user ? user.forumNick || user.username : 'Login'}
-            <ExternalLink size={14} />
-          </Link>
           <ThemeToggle />
           <SearchBox />
         </div>

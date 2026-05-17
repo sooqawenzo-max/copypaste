@@ -7,9 +7,9 @@ export function CategoryNav() {
   const params = useSearchParams();
   const category = params.get('category') === 'config'
     ? 'config'
-    : params.get('category') === 'all'
-      ? 'all'
-      : 'lua';
+    : params.get('category') === 'lua'
+      ? 'lua'
+      : 'all';
 
   return (
     <>
