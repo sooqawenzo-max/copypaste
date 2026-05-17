@@ -29,8 +29,15 @@ type Props = {
   }>;
 };
 
+type CategoryFilter = FileCategory | 'all';
+
 function normalizeCategory(category?: string): FileCategory {
   return category === 'config' ? 'config' : 'lua';
+}
+
+function normalizeCategoryFilter(category?: string): CategoryFilter {
+  if (category === 'all') return 'all';
+  return normalizeCategory(category);
 }
 
 function categoryLabel(category: FileCategory) {
@@ -41,6 +48,10 @@ function categorySummary(category: FileCategory) {
   return category === 'config'
     ? 'Configs with required previews, tags and platform filters.'
     : 'GameSense Lua posts with previews, authors and protected code.';
+}
+
+function filterLabel(category: CategoryFilter) {
+  return category === 'all' ? 'All' : categoryLabel(category);
 }
 
 function isOnline(user: PublicUser) {
@@ -112,7 +123,7 @@ export default async function Home({ searchParams }: Props) {
   const authorMap = new Map(users.map((entry) => [entry.id, entry]));
   const files = db.files.sort((a, b) => a.title.localeCompare(b.title));
   const current = files.find((file) => file.slug === query.file);
-  const selectedCategory = current?.category || normalizeCategory(query.category);
+  const selectedCategory = current?.category || normalizeCategoryFilter(query.category);
   const profileResults = users.filter((entry) => matchUser(entry, search)).slice(0, 6);
   const trendingFiles = [...files]
     .sort((a, b) => fileUpdatedAt(b) - fileUpdatedAt(a))
@@ -126,7 +137,9 @@ export default async function Home({ searchParams }: Props) {
     .filter((entry) => isOnline(entry) || entry.id === user?.id)
     .slice(0, 8);
   const visibleFiles = files.filter(
-    (file) => file.category === selectedCategory && matchFile(file, search)
+    (file) =>
+      (selectedCategory === 'all' || file.category === selectedCategory) &&
+      matchFile(file, search)
   );
   const screenshotCount = visibleFiles.reduce(
     (count, file) => count + (file.screenshots?.length || 0),
@@ -224,6 +237,12 @@ export default async function Home({ searchParams }: Props) {
                   </div>
                   <div className="forum-heading-actions">
                     <Link
+                      className={selectedCategory === 'all' ? 'primary-action compact' : 'ghost-action'}
+                      href="/?category=all"
+                    >
+                      All
+                    </Link>
+                    <Link
                       className={selectedCategory === 'lua' ? 'primary-action compact' : 'ghost-action'}
                       href="/?category=lua"
                     >
@@ -241,7 +260,9 @@ export default async function Home({ searchParams }: Props) {
                   </div>
                 </div>
 
-                {renderForumBlock(selectedCategory)}
+                {selectedCategory === 'all'
+                  ? (['lua', 'config'] as FileCategory[]).map((category) => renderForumBlock(category))
+                  : renderForumBlock(selectedCategory)}
 
                 {profileResults.length ? (
                   <div className="forum-block">
@@ -268,7 +289,7 @@ export default async function Home({ searchParams }: Props) {
                 <div className="forum-quick-stats">
                   <span>
                     <MessageSquare size={17} />
-                    {visibleFiles.length} posts
+                    {visibleFiles.length} {filterLabel(selectedCategory)} posts
                   </span>
                   <span>
                     <ImageIcon size={17} />
