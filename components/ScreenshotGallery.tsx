@@ -34,6 +34,13 @@ export function ScreenshotGallery({ fileId, title, screenshots }: Props) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageUrl(fileId, shot)}
+              alt=""
+              aria-hidden="true"
+              className="screenshot-blur-bg"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl(fileId, shot)}
               alt={`${title} screenshot ${index + 1}`}
               className="config-image"
             />
@@ -50,6 +57,13 @@ export function ScreenshotGallery({ fileId, title, screenshots }: Props) {
           >
             <X size={20} />
           </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl(fileId, active)}
+            alt=""
+            aria-hidden="true"
+            className="modal-blur-bg"
+          />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl(fileId, active)}

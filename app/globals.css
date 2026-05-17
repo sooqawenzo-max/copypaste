@@ -1307,6 +1307,8 @@ select:hover {
 }
 
 .config-image {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: auto;
@@ -1893,6 +1895,7 @@ select:hover {
 }
 
 .screenshot-thumb {
+  position: relative;
   display: block;
   overflow: hidden;
   padding: 0;
@@ -1901,6 +1904,17 @@ select:hover {
   background: #111214;
   cursor: zoom-in;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+}
+
+.screenshot-blur-bg {
+  position: absolute;
+  inset: -22px;
+  width: calc(100% + 44px);
+  height: calc(100% + 44px);
+  object-fit: cover;
+  opacity: 0.36;
+  filter: blur(22px);
+  transform: scale(1.08);
 }
 
 .image-modal {
@@ -1914,7 +1928,20 @@ select:hover {
   backdrop-filter: blur(10px);
 }
 
+.modal-blur-bg {
+  position: fixed;
+  inset: -40px;
+  width: calc(100% + 80px);
+  height: calc(100% + 80px);
+  object-fit: cover;
+  opacity: 0.18;
+  filter: blur(34px);
+  transform: scale(1.04);
+}
+
 .modal-image {
+  position: relative;
+  z-index: 1;
   width: min(1200px, 94vw);
   max-height: 86vh;
   object-fit: contain;
