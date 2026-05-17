@@ -56,7 +56,8 @@ export async function savePostedContent(args: {
     await put(pathname, args.body, {
       access: 'private',
       allowOverwrite: true,
-      contentType: args.mime || 'text/plain'
+      contentType: args.mime || 'text/plain',
+      cacheControlMaxAge: 60
     });
 
     return {
@@ -86,7 +87,7 @@ export async function readStoredFileText(file: DocFile) {
   if (file.id === 'getting-started') return seedContent;
 
   if (file.storage === 'blob') {
-    const result = await get(file.blobPath, { access: 'private' });
+    const result = await get(file.blobPath, { access: 'private', useCache: false });
     if (!result || result.statusCode !== 200 || !result.stream) return '';
     return new Response(result.stream).text();
   }
@@ -111,6 +112,7 @@ export async function streamStoredFile(file: DocFile, ifNoneMatch?: string | nul
   if (file.storage === 'blob') {
     const result = await get(file.blobPath, {
       access: 'private',
+      useCache: false,
       ifNoneMatch: ifNoneMatch ?? undefined
     });
 
@@ -160,6 +162,7 @@ export async function streamStoredImage(file: DocFile, ifNoneMatch?: string | nu
   if (file.imageStorage === 'blob') {
     const result = await get(file.imagePath, {
       access: 'private',
+      useCache: false,
       ifNoneMatch: ifNoneMatch ?? undefined
     });
 

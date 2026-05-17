@@ -114,7 +114,7 @@ async function writeLocalDatabase(db: Database) {
 
 async function readBlobDatabase(): Promise<Database | null> {
   try {
-    const result = await get(DB_PATH, { access: 'private' });
+    const result = await get(DB_PATH, { access: 'private', useCache: false });
     if (!result || result.statusCode !== 200) return null;
     const raw = await streamToText(result.stream);
     return JSON.parse(raw) as Database;
@@ -144,7 +144,8 @@ export async function saveDatabase(db: Database) {
     await put(DB_PATH, JSON.stringify(db, null, 2), {
       access: 'private',
       allowOverwrite: true,
-      contentType: 'application/json'
+      contentType: 'application/json',
+      cacheControlMaxAge: 60
     });
     return;
   }

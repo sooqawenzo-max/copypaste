@@ -22,28 +22,36 @@ export function AdminPanel({ user, files, users }: Props) {
 
   async function publish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setBusy(true);
     setMessage('');
 
-    const response = await fetch('/api/files', {
-      method: 'POST',
-      body: new FormData(event.currentTarget)
-    });
+    try {
+      const response = await fetch('/api/files', {
+        method: 'POST',
+        body: new FormData(formElement),
+        cache: 'no-store'
+      });
 
-    const body = await response.json().catch(() => ({}));
-    setBusy(false);
+      const body = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-      setMessage(body.error || 'Publish failed');
-      return;
+      if (!response.ok) {
+        setMessage(body.error || `Publish failed (${response.status})`);
+        return;
+      }
+
+      formElement.reset();
+      if (fileInput.current) fileInput.current.value = '';
+      if (imageInput.current) imageInput.current.value = '';
+      setCategory('lua');
+      setMessage('File published');
+      router.push(`/?category=${body.file.category}&file=${body.file.slug}`);
+      router.refresh();
+    } catch {
+      setMessage('Network error while publishing. Try again.');
+    } finally {
+      setBusy(false);
     }
-
-    event.currentTarget.reset();
-    if (fileInput.current) fileInput.current.value = '';
-    if (imageInput.current) imageInput.current.value = '';
-    setCategory('lua');
-    setMessage('File published');
-    router.refresh();
   }
 
   async function deleteFile(id: string) {
