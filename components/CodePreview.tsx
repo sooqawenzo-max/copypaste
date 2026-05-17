@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check, ChevronDown, Code2, Copy, Download, Lock } from 'lucide-react';
+import { Check, Code2, Copy, Download, ExternalLink, Lock } from 'lucide-react';
 
 type Props = {
   content: string;
@@ -18,7 +18,6 @@ export function CodePreview({
   downloadUrl,
   filename
 }: Props) {
-  const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const { visibleContent, hasMore } = useMemo(() => {
     if (locked) {
@@ -35,10 +34,10 @@ end`,
 
     const lines = content.split(/\r?\n/);
     return {
-      visibleContent: expanded ? content : lines.slice(0, previewLines).join('\n'),
+      visibleContent: lines.slice(0, previewLines).join('\n'),
       hasMore: lines.length > previewLines
     };
-  }, [content, expanded, locked, previewLines]);
+  }, [content, locked, previewLines]);
 
   async function copyFullFile() {
     await navigator.clipboard.writeText(content);
@@ -47,14 +46,10 @@ end`,
   }
 
   return (
-    <div
-      className={`code-frame ${locked ? 'locked-code' : ''} ${
-        hasMore && !expanded ? 'preview-code' : ''
-      }`}
-    >
+    <div className={`code-frame ${locked ? 'locked-code' : ''} ${hasMore ? 'preview-code' : ''}`}>
       <div className="code-title">
         {locked ? <Lock size={15} /> : <Code2 size={15} />}
-        <span>{locked ? 'Locked preview' : expanded ? 'Full code' : 'Preview'}</span>
+        <span>{locked ? 'Locked preview' : 'Preview'}</span>
         {!locked ? (
           <div className="code-tools">
             <button className="code-tool-btn" onClick={copyFullFile} type="button">
@@ -62,11 +57,7 @@ end`,
               <span>{copied ? 'Скопировано' : 'Скопировать'}</span>
             </button>
             {downloadUrl ? (
-              <a
-                className="code-tool-btn"
-                href={downloadUrl}
-                download={filename || true}
-              >
+              <a className="code-tool-btn" href={downloadUrl} download={filename || true}>
                 <Download size={15} />
                 <span>Скачать</span>
               </a>
@@ -83,16 +74,12 @@ end`,
           <span>Login to view code</span>
         </div>
       ) : null}
-      {!locked && hasMore && !expanded ? (
+      {!locked && hasMore && downloadUrl ? (
         <div className="code-preview-overlay">
-          <button
-            className="show-more-code"
-            onClick={() => setExpanded(true)}
-            type="button"
-          >
+          <a className="show-more-code" href={downloadUrl} target="_blank" rel="noreferrer">
             <span>Дальше</span>
-            <ChevronDown size={16} />
-          </button>
+            <ExternalLink size={16} />
+          </a>
         </div>
       ) : null}
     </div>

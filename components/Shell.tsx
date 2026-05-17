@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ExternalLink, Home, Search } from 'lucide-react';
+import { ExternalLink, Home } from 'lucide-react';
 import { PublicUser } from '@/lib/types';
 import { ThemeToggle } from './ThemeToggle';
 import { CodePreview } from './CodePreview';
+import { SearchBox } from './SearchBox';
+import { LanguageToggle } from './LanguageToggle';
 
 export function Brand() {
   return (
@@ -41,10 +43,8 @@ export function TopNav({ user }: { user: PublicUser | null }) {
             <ExternalLink size={14} />
           </Link>
           <ThemeToggle />
-          <Link className="search-pill" href="/?category=lua">
-            <Search size={20} />
-            <span>Search</span>
-          </Link>
+          <LanguageToggle />
+          <SearchBox />
         </div>
       </div>
     </nav>

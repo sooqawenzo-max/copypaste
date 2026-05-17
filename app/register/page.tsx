@@ -3,10 +3,10 @@
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogIn } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
 import { Brand } from '@/components/Shell';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -17,24 +17,25 @@ export default function LoginPage() {
     setError('');
 
     const form = new FormData(event.currentTarget);
-    const response = await fetch('/api/auth/login', {
+    const response = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        invite: form.get('invite'),
         username: form.get('username'),
+        forumNick: form.get('forumNick'),
         password: form.get('password')
       })
     });
 
     const body = await response.json().catch(() => ({}));
     setBusy(false);
-
     if (!response.ok) {
-      setError(body.error || 'Login failed');
+      setError(body.error || 'Registration failed');
       return;
     }
 
-    router.push('/admin');
+    router.push(`/u/${body.user.uid}`);
     router.refresh();
   }
 
@@ -42,23 +43,19 @@ export default function LoginPage() {
     <main className="login-page">
       <div className="login-card">
         <Brand />
-        <h1>Admin login</h1>
+        <h1>Invite register</h1>
         <form className="stack-form" onSubmit={submit}>
-          <label>
-            Username
-            <input name="username" defaultValue="admin" autoComplete="username" />
-          </label>
-          <label>
-            Password
-            <input name="password" type="password" autoComplete="current-password" />
-          </label>
+          <input name="invite" placeholder="invite key" required />
+          <input name="username" placeholder="username" required />
+          <input name="forumNick" placeholder="forum nick" />
+          <input name="password" placeholder="password" type="password" required />
           <button className="primary-action" disabled={busy} type="submit">
-            <LogIn size={16} />
-            {busy ? 'Signing in...' : 'Sign in'}
+            <KeyRound size={16} />
+            {busy ? 'Creating...' : 'Create profile'}
           </button>
           {error ? <p className="form-message danger-text">{error}</p> : null}
-          <Link className="download-link" href="/register">
-            Register by invite
+          <Link className="download-link" href="/login">
+            Login instead
           </Link>
         </form>
       </div>

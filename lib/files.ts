@@ -2,7 +2,7 @@ import { get, put } from '@vercel/blob';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { DocFile } from './types';
+import { DocFile, StoredAsset } from './types';
 
 const LOCAL_DATA_DIR = process.env.VERCEL
   ? path.join(os.tmpdir(), 'copypast')
@@ -155,12 +155,28 @@ export async function streamStoredFile(file: DocFile, ifNoneMatch?: string | nul
 }
 
 export async function streamStoredImage(file: DocFile, ifNoneMatch?: string | null) {
-  if (!file.imagePath || !file.imageMime || !file.imageStorage) {
+  const firstScreenshot =
+    file.screenshots?.[0] ||
+    (file.imagePath && file.imageMime && file.imageStorage
+      ? {
+          id: `${file.id}-legacy-shot`,
+          name: file.imageName || 'screenshot',
+          mime: file.imageMime,
+          storage: file.imageStorage,
+          path: file.imagePath
+        }
+      : null);
+
+  if (!firstScreenshot) {
     return new Response('Not found', { status: 404 });
   }
 
-  if (file.imageStorage === 'blob') {
-    const result = await get(file.imagePath, {
+  return streamStoredAsset(firstScreenshot, ifNoneMatch);
+}
+
+export async function streamStoredAsset(asset: StoredAsset, ifNoneMatch?: string | null) {
+  if (asset.storage === 'blob') {
+    const result = await get(asset.path, {
       access: 'private',
       useCache: false,
       ifNoneMatch: ifNoneMatch ?? undefined
@@ -184,7 +200,7 @@ export async function streamStoredImage(file: DocFile, ifNoneMatch?: string | nu
 
     return new Response(result.stream, {
       headers: {
-        'Content-Type': result.blob.contentType || file.imageMime,
+        'Content-Type': result.blob.contentType || asset.mime,
         ETag: result.blob.etag,
         'Cache-Control': 'private, no-cache'
       }
@@ -192,10 +208,10 @@ export async function streamStoredImage(file: DocFile, ifNoneMatch?: string | nu
   }
 
   try {
-    const body = await readFile(localPathFromBlobPath(file.imagePath));
+    const body = await readFile(localPathFromBlobPath(asset.path));
     return new Response(body, {
       headers: {
-        'Content-Type': file.imageMime,
+        'Content-Type': asset.mime,
         'Cache-Control': 'private, no-cache'
       }
     });

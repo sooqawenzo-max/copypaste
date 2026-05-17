@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
 import { canPublish, getCurrentUser } from '@/lib/auth';
-import { loadDatabase, saveDatabase } from '@/lib/db';
+import { addAuditLog, loadDatabase, saveDatabase } from '@/lib/db';
 import { savePostedContent, slugify } from '@/lib/files';
-import { DocFile, FileCategory } from '@/lib/types';
+import { DocFile, FileCategory, Platform, StoredAsset } from '@/lib/types';
 
 const categories: FileCategory[] = ['lua', 'config'];
+const platforms: Platform[] = ['nl', 'gs'];
+
+function parseTags(input: FormDataEntryValue | null) {
+  return String(input || '')
+    .split(',')
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean)
+    .slice(0, 12);
+}
 
 export async function GET() {
   const db = await loadDatabase();
@@ -33,10 +42,18 @@ export async function POST(request: Request) {
     const category = categories.includes(categoryInput as FileCategory)
       ? (categoryInput as FileCategory)
       : 'lua';
-    const description = String(form.get('description') || '').trim();
+    const platformInput = String(form.get('platform') || 'gs').trim().toLowerCase();
+    const platform = platforms.includes(platformInput as Platform)
+      ? (platformInput as Platform)
+      : 'gs';
+    const tags = parseTags(form.get('tags'));
     const content = String(form.get('content') || '');
     const uploaded = form.get('file');
-    const image = form.get('image');
+    const imageInputs = [...form.getAll('images'), ...form.getAll('image')];
+    const images = imageInputs.filter(
+      (entry): entry is File =>
+        entry instanceof File && entry.size > 0 && entry.type.startsWith('image/')
+    ).slice(0, 3);
 
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -63,7 +80,7 @@ export async function POST(request: Request) {
 
     if (
       category === 'config' &&
-      (!(image instanceof File) || image.size === 0 || !image.type.startsWith('image/'))
+      images.length === 0
     ) {
       return NextResponse.json(
         { error: 'Configs require a screenshot image' },
@@ -83,38 +100,57 @@ export async function POST(request: Request) {
     }
 
     const stored = await savePostedContent({ id, filename, mime, body });
-    const storedImage =
-      image instanceof File && image.size > 0 && image.type.startsWith('image/')
-        ? await savePostedContent({
+    const screenshots: StoredAsset[] = [];
+
+    for (const image of images) {
+      const storedImage = await savePostedContent({
             id,
             filename: image.name,
             mime: image.type,
             body: image,
             folder: 'images'
-          })
-        : null;
+      });
+
+      screenshots.push({
+        id: crypto.randomUUID(),
+        name: image.name,
+        mime: image.type,
+        storage: storedImage.storage,
+        path: storedImage.blobPath
+      });
+    }
+
     const now = new Date().toISOString();
     const file: DocFile = {
       id,
       slug,
       title,
       category,
-      description,
+      description: '',
+      platform,
+      tags,
       originalName: filename,
       mime,
       size,
       storage: stored.storage,
       blobPath: stored.blobPath,
-      imageName: image instanceof File && image.size > 0 ? image.name : undefined,
-      imageMime: image instanceof File && image.size > 0 ? image.type : undefined,
-      imageStorage: storedImage?.storage,
-      imagePath: storedImage?.blobPath,
+      imageName: screenshots[0]?.name,
+      imageMime: screenshots[0]?.mime,
+      imageStorage: screenshots[0]?.storage,
+      imagePath: screenshots[0]?.path,
+      screenshots,
       authorId: user!.id,
       createdAt: now,
       updatedAt: now
     };
 
     db.files.push(file);
+    addAuditLog(db, {
+      actorId: user!.id,
+      action: 'file.created',
+      targetId: file.id,
+      message: `published ${file.category} ${file.title}`
+    });
     await saveDatabase(db);
 
     return NextResponse.json({ file }, { status: 201 });

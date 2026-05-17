@@ -3,52 +3,67 @@
 import { FormEvent, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ImagePlus, LogOut, Send, ShieldPlus, Trash2, Upload } from 'lucide-react';
-import { DocFile, FileCategory, PublicUser, Role } from '@/lib/types';
+import {
+  ImagePlus,
+  KeyRound,
+  LogOut,
+  Pencil,
+  Send,
+  ShieldPlus,
+  Trash2,
+  Upload
+} from 'lucide-react';
+import { AuditLog, DocFile, FileCategory, InviteKey, Platform, PublicUser, Role } from '@/lib/types';
 
 type Props = {
   user: PublicUser;
   files: DocFile[];
   users: PublicUser[];
+  auditLogs: AuditLog[];
+  inviteKeys: InviteKey[];
 };
 
-export function AdminPanel({ user, files, users }: Props) {
+export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [category, setCategory] = useState<FileCategory>('lua');
+  const [platform, setPlatform] = useState<Platform>('gs');
+  const [editing, setEditing] = useState<DocFile | null>(null);
 
-  async function publish(event: FormEvent<HTMLFormElement>) {
+  async function submitFile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formElement = event.currentTarget;
     setBusy(true);
     setMessage('');
 
     try {
-      const response = await fetch('/api/files', {
-        method: 'POST',
+      const response = await fetch(editing ? `/api/files/${editing.id}` : '/api/files', {
+        method: editing ? 'PATCH' : 'POST',
         body: new FormData(formElement),
         cache: 'no-store'
       });
 
       const body = await response.json().catch(() => ({}));
-
       if (!response.ok) {
-        setMessage(body.error || `Publish failed (${response.status})`);
+        setMessage(body.error || `Save failed (${response.status})`);
         return;
       }
 
       formElement.reset();
       if (fileInput.current) fileInput.current.value = '';
       if (imageInput.current) imageInput.current.value = '';
+      setEditing(null);
       setCategory('lua');
-      setMessage('File published');
+      setPlatform('gs');
+      setMessage(editing ? 'File updated' : 'File published');
       router.push(`/?category=${body.file.category}&file=${body.file.slug}`);
       router.refresh();
     } catch {
-      setMessage('Network error while publishing. Try again.');
+      setMessage('Network error while saving. Try again.');
     } finally {
       setBusy(false);
     }
@@ -62,6 +77,13 @@ export function AdminPanel({ user, files, users }: Props) {
       return;
     }
     router.refresh();
+  }
+
+  function startEdit(file: DocFile) {
+    setEditing(file);
+    setCategory(file.category);
+    setPlatform(file.platform || 'gs');
+    window.requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: 'smooth' }));
   }
 
   async function createUser(event: FormEvent<HTMLFormElement>) {
@@ -106,6 +128,17 @@ export function AdminPanel({ user, files, users }: Props) {
     router.refresh();
   }
 
+  async function createInvite() {
+    const response = await fetch('/api/invites', { method: 'POST' });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setMessage(body.error || 'Invite creation failed');
+      return;
+    }
+    setMessage(`Invite: ${body.invite.key}`);
+    router.refresh();
+  }
+
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/login');
@@ -119,46 +152,53 @@ export function AdminPanel({ user, files, users }: Props) {
       <section className="admin-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Publishing</p>
-            <h1>Post Lua or config</h1>
+            <p className="eyebrow">{editing ? 'Editing' : 'Publishing'}</p>
+            <h1>{editing ? editing.title : 'Post Lua or config'}</h1>
           </div>
           <button className="ghost-action" onClick={logout} type="button">
             <LogOut size={16} />
             Logout
           </button>
         </div>
-        <form className="stack-form" onSubmit={publish}>
+        <form className="stack-form" ref={formRef} onSubmit={submitFile}>
           <label>
             Title
-            <input name="title" placeholder="ragebot_helper" required />
+            <input name="title" placeholder="ragebot_helper" defaultValue={editing?.title || ''} required />
           </label>
 
           <div className="segmented-field" aria-label="Post category">
-            <label className={category === 'lua' ? 'segment active' : 'segment'}>
-              <input
-                type="radio"
-                name="category"
-                value="lua"
-                checked={category === 'lua'}
-                onChange={() => setCategory('lua')}
-              />
-              lua
-            </label>
-            <label className={category === 'config' ? 'segment active' : 'segment'}>
-              <input
-                type="radio"
-                name="category"
-                value="config"
-                checked={category === 'config'}
-                onChange={() => setCategory('config')}
-              />
-              config
-            </label>
+            {(['lua', 'config'] as FileCategory[]).map((entry) => (
+              <label className={category === entry ? 'segment active' : 'segment'} key={entry}>
+                <input
+                  type="radio"
+                  name="category"
+                  value={entry}
+                  checked={category === entry}
+                  onChange={() => setCategory(entry)}
+                />
+                {entry}
+              </label>
+            ))}
+          </div>
+
+          <div className="segmented-field" aria-label="Platform">
+            {(['gs', 'nl'] as Platform[]).map((entry) => (
+              <label className={platform === entry ? `segment active platform-${entry}` : 'segment'} key={entry}>
+                <input
+                  type="radio"
+                  name="platform"
+                  value={entry}
+                  checked={platform === entry}
+                  onChange={() => setPlatform(entry)}
+                />
+                {entry}
+              </label>
+            ))}
           </div>
 
           <label>
-            Description
-            <input name="description" placeholder="Short note about the Lua or config." />
+            Tags
+            <input name="tags" placeholder="rage, visuals, hvh" defaultValue={editing?.tags?.join(', ') || ''} />
           </label>
 
           <label>
@@ -167,11 +207,7 @@ export function AdminPanel({ user, files, users }: Props) {
               name="content"
               rows={12}
               spellCheck={false}
-              placeholder={
-                category === 'config'
-                  ? 'paste config text here, or upload the config file below'
-                  : 'local function main()\n  print("copypast")\nend'
-              }
+              placeholder={editing ? 'Paste new content only if you want to replace the file' : 'local function main()\n  print("copypast")\nend'}
             />
           </label>
 
@@ -181,18 +217,21 @@ export function AdminPanel({ user, files, users }: Props) {
             <input ref={fileInput} type="file" name="file" />
           </label>
 
-          {category === 'config' ? (
-            <label className="file-box image-required">
-              <ImagePlus size={18} />
-              <span>Config screenshot required</span>
-              <input ref={imageInput} type="file" name="image" accept="image/*" required />
-            </label>
-          ) : null}
+          <label className="file-box image-required">
+            <ImagePlus size={18} />
+            <span>Screenshots, max 3</span>
+            <input ref={imageInput} type="file" name="images" accept="image/*" multiple />
+          </label>
 
           <button className="primary-action" disabled={busy} type="submit">
             <Send size={16} />
-            {busy ? 'Publishing...' : 'Publish'}
+            {busy ? 'Saving...' : editing ? 'Save changes' : 'Publish'}
           </button>
+          {editing ? (
+            <button className="ghost-action" onClick={() => setEditing(null)} type="button">
+              Cancel edit
+            </button>
+          ) : null}
           {message ? <p className="form-message">{message}</p> : null}
         </form>
       </section>
@@ -209,21 +248,17 @@ export function AdminPanel({ user, files, users }: Props) {
             <div className="posted-row" key={file.id}>
               <div>
                 <strong>{file.title}</strong>
-                <span>
-                  {file.category} · {Math.max(1, Math.round(file.size / 1024))} KB
-                </span>
+                <span>{file.category} · {file.platform} · {new Date(file.updatedAt).toLocaleDateString('ru-RU')}</span>
               </div>
               <div className="posted-actions">
+                <button className="mini-link" onClick={() => startEdit(file)} type="button">
+                  <Pencil size={14} />
+                  Edit
+                </button>
                 <Link className="mini-link" href={`/?category=${file.category}&file=${file.slug}`}>
                   Open
                 </Link>
-                <button
-                  className="icon-danger"
-                  onClick={() => deleteFile(file.id)}
-                  type="button"
-                  title="Delete"
-                  aria-label={`Delete ${file.title}`}
-                >
+                <button className="icon-danger" onClick={() => deleteFile(file.id)} type="button" aria-label={`Delete ${file.title}`}>
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -236,9 +271,13 @@ export function AdminPanel({ user, files, users }: Props) {
         <section className="admin-panel wide-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Owner controls</p>
-              <h2>Profiles and admin rights</h2>
+              <p className="eyebrow">Owner console</p>
+              <h2>Moderation</h2>
             </div>
+            <button className="primary-action compact" onClick={createInvite} type="button">
+              <KeyRound size={16} />
+              New invite
+            </button>
           </div>
           <form className="profile-form" onSubmit={createUser}>
             <input name="username" placeholder="username" required />
@@ -252,26 +291,44 @@ export function AdminPanel({ user, files, users }: Props) {
               Create
             </button>
           </form>
-          <div className="user-table">
-            {users.map((entry) => (
-              <div className="user-row" key={entry.id}>
-                <div>
-                  <strong>{entry.username}</strong>
-                  <span>{entry.role}</span>
+          <div className="owner-console-grid">
+            <div className="user-table">
+              {users.map((entry) => (
+                <div className="user-row" key={entry.id}>
+                  <div>
+                    <strong className={`role-name role-${entry.role}`}>{entry.forumNick}</strong>
+                    <span>uid {entry.uid} · {entry.role}</span>
+                  </div>
+                  {entry.role === 'owner' ? (
+                    <span className="owner-pill">locked owner</span>
+                  ) : (
+                    <select value={entry.role} onChange={(event) => updateRole(entry.id, event.target.value as Role)}>
+                      <option value="admin">admin</option>
+                      <option value="user">user</option>
+                    </select>
+                  )}
                 </div>
-                {entry.role === 'owner' ? (
-                  <span className="owner-pill">locked owner</span>
-                ) : (
-                  <select
-                    value={entry.role}
-                    onChange={(event) => updateRole(entry.id, event.target.value as Role)}
-                  >
-                    <option value="admin">admin</option>
-                    <option value="user">user</option>
-                  </select>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
+            <div className="audit-console">
+              <h3>Audit</h3>
+              {auditLogs.slice(0, 18).map((log) => (
+                <div className="audit-row" key={log.id}>
+                  <span>{new Date(log.createdAt).toLocaleString('ru-RU')}</span>
+                  <strong>{log.action}</strong>
+                  <p>{log.message}</p>
+                </div>
+              ))}
+            </div>
+            <div className="audit-console">
+              <h3>Invites</h3>
+              {inviteKeys.slice(0, 12).map((invite) => (
+                <div className="audit-row" key={invite.id}>
+                  <strong>{invite.key}</strong>
+                  <p>{invite.usedBy ? 'used' : 'unused'}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       ) : null}

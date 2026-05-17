@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser, isOwner } from '@/lib/auth';
-import { loadDatabase, saveDatabase, toPublicUser } from '@/lib/db';
+import { addAuditLog, loadDatabase, saveDatabase, toPublicUser } from '@/lib/db';
 import { Role } from '@/lib/types';
 
 const allowedRoles: Role[] = ['admin', 'user'];
@@ -32,6 +32,12 @@ export async function PATCH(
   }
 
   target.role = body.role;
+  addAuditLog(db, {
+    actorId: currentUser!.id,
+    action: 'user.role',
+    targetId: target.id,
+    message: `changed ${target.username} role to ${body.role}`
+  });
   await saveDatabase(db);
 
   return NextResponse.json({ user: toPublicUser(target) });

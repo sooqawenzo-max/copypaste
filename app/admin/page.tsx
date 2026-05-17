@@ -21,6 +21,8 @@ export default async function AdminPage() {
           user={user!}
           files={db.files.sort((a, b) => b.createdAt.localeCompare(a.createdAt))}
           users={users}
+          auditLogs={db.auditLogs || []}
+          inviteKeys={db.inviteKeys || []}
         />
       </main>
     </>

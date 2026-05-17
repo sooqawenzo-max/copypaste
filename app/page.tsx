@@ -1,12 +1,13 @@
-import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronDown, ChevronRight, Lock, PanelLeftClose } from 'lucide-react';
+import Image from 'next/image';
+import { ChevronDown, ChevronRight, Lock, PanelLeftClose, Sparkles } from 'lucide-react';
 import { Breadcrumbs, CodeFrame, TopNav } from '@/components/Shell';
 import { DotGridBackground } from '@/components/DotGridBackground';
+import { ScreenshotGallery } from '@/components/ScreenshotGallery';
 import { getCurrentUser } from '@/lib/auth';
 import { loadDatabase } from '@/lib/db';
 import { readStoredFileText } from '@/lib/files';
-import { FileCategory } from '@/lib/types';
+import { DocFile, FileCategory, PublicUser } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,7 @@ type Props = {
   searchParams: Promise<{
     file?: string;
     category?: string;
+    q?: string;
   }>;
 };
 
@@ -23,25 +25,76 @@ function normalizeCategory(category?: string): FileCategory {
   return category === 'config' ? 'config' : 'lua';
 }
 
+function isOnline(user: PublicUser) {
+  if (!user.lastSeenAt) return false;
+  return Date.now() - new Date(user.lastSeenAt).getTime() < 5 * 60 * 1000;
+}
+
+function roleClass(role: string) {
+  return `role-name role-${role}`;
+}
+
+function authorLine(author?: PublicUser) {
+  if (!author) return 'unknown';
+  return author.forumNick || author.username;
+}
+
+function matchFile(file: DocFile, query: string) {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return (
+    file.title.toLowerCase().includes(q) ||
+    file.tags?.some((tag) => tag.toLowerCase().includes(q)) ||
+    file.platform.toLowerCase().includes(q)
+  );
+}
+
+function matchUser(user: PublicUser, query: string) {
+  if (!query) return false;
+  const q = query.toLowerCase();
+  return (
+    user.username.toLowerCase().includes(q) ||
+    user.forumNick.toLowerCase().includes(q) ||
+    String(user.uid).includes(q)
+  );
+}
+
+function Avatar({ user, size = 34 }: { user?: PublicUser; size?: number }) {
+  if (!user) return <span className="avatar-fallback" style={{ width: size, height: size }}>?</span>;
+  return user.avatar ? (
+    <Image
+      className="avatar-img"
+      src={`/api/profiles/${user.uid}/avatar`}
+      alt=""
+      width={size}
+      height={size}
+      style={{ width: size, height: size }}
+    />
+  ) : (
+    <span className="avatar-fallback" style={{ width: size, height: size }}>
+      {(user.forumNick || user.username).slice(0, 1).toUpperCase()}
+    </span>
+  );
+}
+
 export default async function Home({ searchParams }: Props) {
   const query = await searchParams;
   const selectedCategory = normalizeCategory(query.category);
+  const search = (query.q || '').trim();
   const [db, user] = await Promise.all([loadDatabase(), getCurrentUser()]);
+  const users = db.users.map(({ passwordHash: _passwordHash, ...entry }) => entry);
+  const authorMap = new Map(users.map((entry) => [entry.id, entry]));
   const files = db.files.sort((a, b) => a.title.localeCompare(b.title));
-  const byCategory = categories.reduce<Record<FileCategory, typeof files>>(
-    (acc, category) => {
-      acc[category] = files.filter((file) => file.category === category);
-      return acc;
-    },
-    { lua: [], config: [] }
+  const filteredForSidebar = files.filter(
+    (file) => file.category === selectedCategory && matchFile(file, search)
   );
-
+  const profileResults = users.filter((entry) => matchUser(entry, search)).slice(0, 6);
   const current =
     files.find((file) => file.slug === query.file) ||
-    byCategory[selectedCategory][0] ||
-    files[0];
+    (query.file ? undefined : undefined);
   const content = current && user ? await readStoredFileText(current) : '';
   const locked = !user;
+  const onlineUsers = users.filter(isOnline).slice(0, 8);
 
   return (
     <>
@@ -60,23 +113,32 @@ export default async function Home({ searchParams }: Props) {
                     <ChevronRight className="menu-arrow arrow-closed" size={19} />
                   )}
                 </Link>
-                {byCategory[category].length ? (
-                  byCategory[category].map((file) => (
-                    <Link
-                      className={`menu-link ${current?.id === file.id ? 'active' : ''}`}
-                      href={`/?category=${category}&file=${file.slug}`}
-                      key={file.id}
-                    >
-                      {file.title}
-                    </Link>
-                  ))
-                ) : (
-                  <Link className="menu-link ghost" href="/admin">
-                    Add {category}
-                  </Link>
-                )}
+                {category === selectedCategory
+                  ? filteredForSidebar.map((file) => (
+                      <Link
+                        className={`menu-link ${current?.id === file.id ? 'active' : ''}`}
+                        href={`/?category=${category}&file=${file.slug}${search ? `&q=${encodeURIComponent(search)}` : ''}`}
+                        key={file.id}
+                      >
+                        <span className={`platform-dot platform-${file.platform}`} />
+                        {file.title}
+                      </Link>
+                    ))
+                  : null}
               </div>
             ))}
+
+            {profileResults.length ? (
+              <div className="menu-category profile-results">
+                <div className="menu-title">profiles</div>
+                {profileResults.map((profile) => (
+                  <Link className="menu-link" href={`/u/${profile.uid}`} key={profile.id}>
+                    <Avatar user={profile} size={20} />
+                    {profile.forumNick}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
           </nav>
           <Link className="collapse-control" href="/admin" aria-label="Open admin panel">
             <PanelLeftClose size={18} />
@@ -85,12 +147,55 @@ export default async function Home({ searchParams }: Props) {
 
         <main className="doc-main">
           <article className="doc-article">
-            {current ? (
+            {!current ? (
+              <section className="landing-panel">
+                <p className="eyebrow">private gamesense forum</p>
+                <h1 className="landing-title">
+                  <span>copy</span><span>past</span> Docs
+                </h1>
+                <p className="landing-copy">
+                  Lua, configs, screenshots, tags, profiles and audit in one quiet place.
+                </p>
+                <div className="landing-actions">
+                  <Link className="primary-action compact" href="/?category=lua">
+                    Lua
+                  </Link>
+                  <Link className="ghost-action" href="/?category=config">
+                    Config
+                  </Link>
+                  <Link className="ghost-action" href="/admin">
+                    Publish
+                  </Link>
+                </div>
+                <div className="online-strip">
+                  <span>online</span>
+                  {onlineUsers.length ? (
+                    onlineUsers.map((entry) => (
+                      <Link href={`/u/${entry.uid}`} key={entry.id} title={entry.forumNick}>
+                        <Avatar user={entry} size={28} />
+                      </Link>
+                    ))
+                  ) : (
+                    <em>quiet</em>
+                  )}
+                </div>
+              </section>
+            ) : (
               <>
                 <Breadcrumbs current={current.title} category={current.category} />
                 <div className="title-row">
                   <div>
-                    <p className="eyebrow">{current.category}</p>
+                    <div className="title-meta">
+                      <span className={`platform-pill platform-${current.platform}`}>
+                        {current.platform}
+                      </span>
+                      <span>{current.category}</span>
+                      {current.tags?.slice(0, 4).map((tag) => (
+                        <Link href={`/?category=${current.category}&q=${encodeURIComponent(tag)}`} key={tag}>
+                          #{tag}
+                        </Link>
+                      ))}
+                    </div>
                     <h1>{current.title}</h1>
                   </div>
                   {locked ? (
@@ -101,28 +206,19 @@ export default async function Home({ searchParams }: Props) {
                   ) : null}
                 </div>
 
-                {current.category === 'config' && current.imagePath ? (
+                {current.screenshots?.length ? (
                   <section id="preview" className="config-preview-section">
-                    <h2>Preview</h2>
-                    <div className="config-preview">
-                      <Image
-                        src={`/api/files/${current.id}/image`}
-                        alt={`${current.title} config screenshot`}
-                        width={1100}
-                        height={620}
-                        className="config-image"
-                      />
-                    </div>
+                    <h2>
+                      <Sparkles size={22} />
+                      Preview
+                    </h2>
+                    <ScreenshotGallery
+                      fileId={current.id}
+                      title={current.title}
+                      screenshots={current.screenshots}
+                    />
                   </section>
                 ) : null}
-
-                <section id="description">
-                  <h2>Description</h2>
-                  <p>
-                    {current.description ||
-                      `Posted GameSense ${current.category} ready to save and use.`}
-                  </p>
-                </section>
 
                 <section id="example">
                   <h2>{current.category === 'config' ? 'Config' : 'Lua'}</h2>
@@ -132,56 +228,48 @@ export default async function Home({ searchParams }: Props) {
                     downloadUrl={user ? `/api/files/${current.id}/content` : undefined}
                     filename={current.originalName}
                   />
-                  <div className="doc-actions">
-                    {user ? (
-                      <a href={`/api/files/${current.id}/content`} className="download-link">
-                        Open raw file
-                      </a>
-                    ) : (
-                      <Link href="/login" className="download-link">
-                        Login to open raw file
-                      </Link>
-                    )}
-                  </div>
                 </section>
 
                 <section id="arguments">
                   <h2>Properties</h2>
                   <div className="property-grid">
-                    <span>Type</span>
-                    <strong>{current.category}</strong>
-                    <span>Filename</span>
-                    <strong>{current.originalName}</strong>
+                    <span>Author</span>
+                    <strong>
+                      <Link className="author-property" href={`/u/${authorMap.get(current.authorId)?.uid || 1}`}>
+                        <Avatar user={authorMap.get(current.authorId)} />
+                        <span className={roleClass(authorMap.get(current.authorId)?.role || 'user')}>
+                          {authorLine(authorMap.get(current.authorId))}
+                        </span>
+                      </Link>
+                    </strong>
+                    <span>Forum nick</span>
+                    <strong>{authorLine(authorMap.get(current.authorId))}</strong>
+                    <span>Published</span>
+                    <strong>{new Date(current.createdAt).toLocaleString('ru-RU')}</strong>
+                    <span>Updated</span>
+                    <strong>{new Date(current.updatedAt).toLocaleString('ru-RU')}</strong>
                     <span>Size</span>
                     <strong>{Math.max(1, Math.round(current.size / 1024))} KB</strong>
-                    <span>Storage</span>
-                    <strong>{current.storage === 'blob' ? 'Vercel Blob' : 'Local dev'}</strong>
-                    {current.imageName ? (
-                      <>
-                        <span>Screenshot</span>
-                        <strong>{current.imageName}</strong>
-                      </>
-                    ) : null}
                   </div>
                 </section>
               </>
-            ) : (
-              <div className="empty-state">
-                <h1>lua</h1>
-                <p>Login as admin and publish your first Lua or config.</p>
-              </div>
             )}
           </article>
         </main>
 
         <aside className="toc">
-          {current?.category === 'config' && current.imagePath ? (
-            <a href="#preview">Preview</a>
-          ) : null}
-          <a href="#description">Description</a>
-          <a href="#example">{current?.category === 'config' ? 'Config' : 'Lua'}</a>
-          <a href="#arguments">Properties</a>
-          <Link href="/admin">Admin</Link>
+          {current?.screenshots?.length ? <a href="#preview">Preview</a> : null}
+          {current ? <a href="#example">{current.category === 'config' ? 'Config' : 'Lua'}</a> : null}
+          {current ? <a href="#arguments">Properties</a> : null}
+          <div className="toc-online">
+            <span>Online</span>
+            {onlineUsers.map((entry) => (
+              <Link href={`/u/${entry.uid}`} key={entry.id}>
+                <Avatar user={entry} size={24} />
+                <span className={roleClass(entry.role)}>{entry.forumNick}</span>
+              </Link>
+            ))}
+          </div>
         </aside>
       </div>
     </>

@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { getCurrentUser, isOwner } from '@/lib/auth';
-import { loadDatabase, saveDatabase, toPublicUser } from '@/lib/db';
+import { addAuditLog, loadDatabase, nextUid, saveDatabase, toPublicUser } from '@/lib/db';
 import { Role } from '@/lib/types';
 
 const allowedRoles: Role[] = ['admin', 'user'];
@@ -40,13 +40,23 @@ export async function POST(request: Request) {
 
   const nextUser = {
     id: crypto.randomUUID(),
+    uid: nextUid(db),
     username,
+    forumNick: username,
     passwordHash: await bcrypt.hash(body.password, 12),
     role,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    lastSeenAt: new Date().toISOString(),
+    comments: []
   };
 
   db.users.push(nextUser);
+  addAuditLog(db, {
+    actorId: currentUser!.id,
+    action: 'user.created',
+    targetId: nextUser.id,
+    message: `created user ${nextUser.username}`
+  });
   await saveDatabase(db);
 
   return NextResponse.json({ user: toPublicUser(nextUser) }, { status: 201 });

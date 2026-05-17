@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { createSession, SESSION_COOKIE } from '@/lib/auth';
-import { loadDatabase, toPublicUser } from '@/lib/db';
+import { loadDatabase, saveDatabase, toPublicUser } from '@/lib/db';
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as
@@ -20,6 +20,9 @@ export async function POST(request: Request) {
   if (!user || !(await bcrypt.compare(body.password, user.passwordHash))) {
     return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
   }
+
+  user.lastSeenAt = new Date().toISOString();
+  await saveDatabase(db);
 
   const publicUser = toPublicUser(user);
   const token = await createSession(publicUser);

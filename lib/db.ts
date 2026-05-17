@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { Database, FileCategory } from './types';
+import { AuditAction, Database, FileCategory, User } from './types';
 
 const DB_PATH = 'db/copypast.json';
 const LOCAL_DATA_DIR = process.env.VERCEL
@@ -30,10 +30,14 @@ async function seedDatabase(): Promise<Database> {
     users: [
       {
         id: 'admin',
+        uid: 1,
         username: 'admin',
+        forumNick: 'admin',
         passwordHash: await bcrypt.hash(password, 12),
         role: 'owner',
-        createdAt: now
+        createdAt: now,
+        lastSeenAt: now,
+        comments: []
       }
     ],
     files: [
@@ -44,16 +48,21 @@ async function seedDatabase(): Promise<Database> {
         category: 'lua',
         description:
           'A starter GameSense Lua post. Login to view raw code and download files.',
+        platform: 'gs',
+        tags: ['starter', 'gamesense'],
         originalName: 'lua.lua',
         mime: 'text/plain',
         size: 615,
         storage: 'local',
         blobPath: 'seed/getting-started.lua',
+        screenshots: [],
         authorId: 'admin',
         createdAt: now,
         updatedAt: now
       }
-    ]
+    ],
+    auditLogs: [],
+    inviteKeys: []
   };
 }
 
@@ -63,12 +72,51 @@ function normalizeCategory(category: string): FileCategory {
 
 async function normalizeDatabase(db: Database) {
   let changed = false;
+  db.auditLogs ||= [];
+  db.inviteKeys ||= [];
+
+  let maxUid = db.users.reduce((max, user) => Math.max(max, user.uid || 0), 0);
+  db.users = db.users.map((user) => {
+    const next: User = {
+      ...user,
+      uid: user.uid || ++maxUid,
+      forumNick: user.forumNick || user.username,
+      comments: user.comments || [],
+      lastSeenAt: user.lastSeenAt || user.createdAt
+    };
+
+    if (
+      next.uid !== user.uid ||
+      next.forumNick !== user.forumNick ||
+      next.comments !== user.comments ||
+      next.lastSeenAt !== user.lastSeenAt
+    ) {
+      changed = true;
+    }
+
+    return next;
+  });
 
   db.files = db.files.map((file) => {
     const nextCategory = normalizeCategory(file.category);
+    const screenshots = file.screenshots || [];
+    if (file.imagePath && !screenshots.some((shot) => shot.path === file.imagePath)) {
+      screenshots.push({
+        id: `${file.id}-legacy-shot`,
+        name: file.imageName || 'screenshot',
+        mime: file.imageMime || 'image/png',
+        storage: file.imageStorage || file.storage,
+        path: file.imagePath
+      });
+      changed = true;
+    }
+
     const nextFile = {
       ...file,
-      category: nextCategory
+      category: nextCategory,
+      platform: file.platform || 'gs',
+      tags: file.tags || [],
+      screenshots
     };
 
     if (file.id === 'getting-started') {
@@ -87,11 +135,21 @@ async function normalizeDatabase(db: Database) {
         category: 'lua' as const,
         description:
           'A starter GameSense Lua post. Login to view raw code and download files.',
-        originalName: 'lua.lua'
+        platform: 'gs' as const,
+        tags: ['starter', 'gamesense'],
+        originalName: 'lua.lua',
+        screenshots: []
       };
     }
 
-    if (file.category !== nextCategory) changed = true;
+    if (
+      file.category !== nextCategory ||
+      !file.platform ||
+      !file.tags ||
+      !file.screenshots
+    ) {
+      changed = true;
+    }
     return nextFile;
   });
 
@@ -156,4 +214,29 @@ export async function saveDatabase(db: Database) {
 export function toPublicUser(user: Database['users'][number]) {
   const { passwordHash: _passwordHash, ...publicUser } = user;
   return publicUser;
+}
+
+export function nextUid(db: Database) {
+  return db.users.reduce((max, user) => Math.max(max, user.uid || 0), 0) + 1;
+}
+
+export function addAuditLog(
+  db: Database,
+  args: {
+    actorId: string;
+    action: AuditAction;
+    targetId?: string;
+    message: string;
+  }
+) {
+  db.auditLogs ||= [];
+  db.auditLogs.unshift({
+    id: crypto.randomUUID(),
+    actorId: args.actorId,
+    action: args.action,
+    targetId: args.targetId,
+    message: args.message,
+    createdAt: new Date().toISOString()
+  });
+  db.auditLogs = db.auditLogs.slice(0, 250);
 }
