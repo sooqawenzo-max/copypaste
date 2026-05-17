@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { StoredAsset } from '@/lib/types';
@@ -10,6 +9,12 @@ type Props = {
   title: string;
   screenshots: StoredAsset[];
 };
+
+function imageUrl(fileId: string, shot: StoredAsset) {
+  return shot.id.endsWith('-legacy-shot')
+    ? `/api/files/${fileId}/image`
+    : `/api/files/${fileId}/image?shot=${shot.id}`;
+}
 
 export function ScreenshotGallery({ fileId, title, screenshots }: Props) {
   const [active, setActive] = useState<StoredAsset | null>(null);
@@ -26,11 +31,10 @@ export function ScreenshotGallery({ fileId, title, screenshots }: Props) {
             onClick={() => setActive(shot)}
             type="button"
           >
-            <Image
-              src={`/api/files/${fileId}/image?shot=${shot.id}`}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl(fileId, shot)}
               alt={`${title} screenshot ${index + 1}`}
-              width={980}
-              height={560}
               className="config-image"
             />
           </button>
@@ -46,11 +50,10 @@ export function ScreenshotGallery({ fileId, title, screenshots }: Props) {
           >
             <X size={20} />
           </button>
-          <Image
-            src={`/api/files/${fileId}/image?shot=${active.id}`}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl(fileId, active)}
             alt={`${title} full screenshot`}
-            width={1600}
-            height={920}
             className="modal-image"
           />
         </div>

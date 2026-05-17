@@ -51,8 +51,8 @@ export function TopNav({ user }: { user: PublicUser | null }) {
 }
 
 export function Breadcrumbs({
-  current,
-  category
+  current: _current,
+  category: _category
 }: {
   current: string;
   category: string;
@@ -62,10 +62,6 @@ export function Breadcrumbs({
       <Link href="/" className="crumb-icon" aria-label="Home page">
         <Home size={16} />
       </Link>
-      <span className="crumb-separator">/</span>
-      <Link href={`/?category=${category}`}>{category}</Link>
-      <span className="crumb-separator">/</span>
-      <span className="crumb-badge">{current}</span>
     </div>
   );
 }
