@@ -11,15 +11,13 @@ type Props = {
   currentUser: PublicUser | null;
   commentAuthors: Record<string, PublicUser>;
   publishCount: number;
-  ageDays: number;
 };
 
 export function ProfilePanel({
   profile,
   currentUser,
   commentAuthors,
-  publishCount,
-  ageDays
+  publishCount
 }: Props) {
   const router = useRouter();
   const avatarRef = useRef<HTMLInputElement>(null);
@@ -70,25 +68,12 @@ export function ProfilePanel({
           <p className="eyebrow">uid {profile.uid}</p>
           <h1 className={`role-name role-${profile.role}`}>{profile.forumNick}</h1>
           <p>{profile.bio || 'No profile text yet.'}</p>
-        <div className="badge-row">
-          <span>{profile.role}</span>
-          <span>registered {new Date(profile.createdAt).toLocaleDateString('ru-RU')}</span>
-          <span>{profile.comments.length} comments</span>
-          <span>{publishCount} uploads</span>
-        </div>
-        </div>
-      </section>
-
-      <section className="profile-section">
-        <h2>Badges</h2>
-        <div className="badge-row">
-          <span>{ageDays >= 30 ? 'month veteran' : ageDays >= 7 ? 'week veteran' : 'first day'}</span>
-          <span>forum profile</span>
-          {publishCount >= 1 ? <span>first publish</span> : null}
-          {publishCount >= 5 ? <span>5 uploads</span> : null}
-          {publishCount >= 10 ? <span>archive keeper</span> : null}
-          {profile.role === 'owner' ? <span>owner glow</span> : null}
-          {profile.role === 'admin' ? <span>admin</span> : null}
+          <div className="profile-meta-line">
+            <span>{profile.role}</span>
+            <span>registered {new Date(profile.createdAt).toLocaleDateString('ru-RU')}</span>
+            <span>{profile.comments.length} comments</span>
+            <span>{publishCount} uploads</span>
+          </div>
         </div>
       </section>
 

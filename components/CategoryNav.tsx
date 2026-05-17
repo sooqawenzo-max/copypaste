@@ -1,37 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { LanguageText } from './LanguageText';
+import { useSearchParams } from 'next/navigation';
 
 export function CategoryNav() {
-  const [active, setActive] = useState<'lua' | 'config'>('lua');
-
-  useEffect(() => {
-    function syncHash() {
-      setActive(window.location.hash === '#config' ? 'config' : 'lua');
-    }
-
-    syncHash();
-    window.addEventListener('hashchange', syncHash);
-    return () => window.removeEventListener('hashchange', syncHash);
-  }, []);
+  const params = useSearchParams();
+  const category = params.get('category') === 'config' ? 'config' : 'lua';
 
   return (
     <>
-      <Link
-        className={`nav-link ${active === 'lua' ? 'active' : 'muted'}`}
-        href="/#lua"
-        onClick={() => setActive('lua')}
-      >
+      <Link className={`nav-link ${category === 'lua' ? 'active' : 'muted'}`} href="/?category=lua">
         Lua
       </Link>
       <Link
-        className={`nav-link ${active === 'config' ? 'active' : 'muted'}`}
-        href="/#config"
-        onClick={() => setActive('config')}
+        className={`nav-link ${category === 'config' ? 'active' : 'muted'}`}
+        href="/?category=config"
       >
-        <LanguageText ru="Конфиг" en="Config" />
+        Config
       </Link>
     </>
   );

@@ -28,7 +28,9 @@ type Props = {
   }>;
 };
 
-const categories: FileCategory[] = ['lua', 'config'];
+function normalizeCategory(category?: string): FileCategory {
+  return category === 'config' ? 'config' : 'lua';
+}
 
 function categoryLabel(category: FileCategory) {
   return category === 'config' ? 'Config' : 'Lua';
@@ -109,6 +111,7 @@ export default async function Home({ searchParams }: Props) {
   const authorMap = new Map(users.map((entry) => [entry.id, entry]));
   const files = db.files.sort((a, b) => a.title.localeCompare(b.title));
   const current = files.find((file) => file.slug === query.file);
+  const selectedCategory = current?.category || normalizeCategory(query.category);
   const profileResults = users.filter((entry) => matchUser(entry, search)).slice(0, 6);
   const trendingFiles = [...files]
     .sort((a, b) => fileUpdatedAt(b) - fileUpdatedAt(a))
@@ -121,7 +124,9 @@ export default async function Home({ searchParams }: Props) {
   const onlineUsers = users
     .filter((entry) => isOnline(entry) || entry.id === user?.id)
     .slice(0, 8);
-  const visibleFiles = files.filter((file) => matchFile(file, search));
+  const visibleFiles = files.filter(
+    (file) => file.category === selectedCategory && matchFile(file, search)
+  );
   const screenshotCount = visibleFiles.reduce(
     (count, file) => count + (file.screenshots?.length || 0),
     0
@@ -217,19 +222,25 @@ export default async function Home({ searchParams }: Props) {
                     </h1>
                   </div>
                   <div className="forum-heading-actions">
-                    <Link className="ghost-action" href="#lua">
+                    <Link
+                      className={selectedCategory === 'lua' ? 'primary-action compact' : 'ghost-action'}
+                      href="/?category=lua"
+                    >
                       Lua
                     </Link>
-                    <Link className="ghost-action" href="#config">
+                    <Link
+                      className={selectedCategory === 'config' ? 'primary-action compact' : 'ghost-action'}
+                      href="/?category=config"
+                    >
                       Config
                     </Link>
-                    <Link className="primary-action compact" href="/admin">
+                    <Link className="ghost-action" href="/admin">
                       Publish
                     </Link>
                   </div>
                 </div>
 
-                {categories.map((category) => renderForumBlock(category))}
+                {renderForumBlock(selectedCategory)}
 
                 {profileResults.length ? (
                   <div className="forum-block">

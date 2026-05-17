@@ -16,7 +16,6 @@ export default async function UserPage({ params }: { params: Promise<{ uid: stri
   const publicUsers = db.users.map(toPublicUser);
   const commentAuthors = Object.fromEntries(publicUsers.map((entry) => [entry.id, entry]));
   const publishCount = db.files.filter((file) => file.authorId === user.id).length;
-  const ageDays = 1;
 
   return (
     <>
@@ -28,7 +27,6 @@ export default async function UserPage({ params }: { params: Promise<{ uid: stri
           currentUser={currentUser}
           commentAuthors={commentAuthors}
           publishCount={publishCount}
-          ageDays={ageDays}
         />
       </main>
     </>

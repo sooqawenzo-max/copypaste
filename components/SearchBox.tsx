@@ -3,12 +3,10 @@
 import { FormEvent, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search } from 'lucide-react';
-import { useLanguage } from './LanguageText';
 
 export function SearchBox() {
   const router = useRouter();
   const params = useSearchParams();
-  const language = useLanguage();
   const [query, setQuery] = useState(params.get('q') || '');
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -26,7 +24,7 @@ export function SearchBox() {
         aria-label="Search files and profiles"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder={language === 'ru' ? 'Поиск' : 'Search'}
+        placeholder="Search"
       />
     </form>
   );

@@ -5,9 +5,7 @@ import { PublicUser } from '@/lib/types';
 import { ThemeToggle } from './ThemeToggle';
 import { CodePreview } from './CodePreview';
 import { SearchBox } from './SearchBox';
-import { LanguageToggle } from './LanguageToggle';
 import { CategoryNav } from './CategoryNav';
-import { LanguageText } from './LanguageText';
 import { OnlinePulse } from './OnlinePulse';
 
 export function Brand() {
@@ -38,11 +36,10 @@ export function TopNav({ user }: { user: PublicUser | null }) {
         </div>
         <div className="nav-right">
           <Link className="nav-link get-link profile-top-link" href={user ? `/u/${user.uid}` : '/login'}>
-            {user ? user.forumNick || user.username : <LanguageText ru="Войти" en="Login" />}
+            {user ? user.forumNick || user.username : 'Login'}
             <ExternalLink size={14} />
           </Link>
           <ThemeToggle />
-          <LanguageToggle />
           <SearchBox />
         </div>
       </div>

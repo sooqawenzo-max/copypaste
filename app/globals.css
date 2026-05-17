@@ -131,9 +131,7 @@ html[data-theme="russian"] .code-title {
 }
 
 html[data-theme="russian"] .code-preview-overlay {
-  background:
-    linear-gradient(180deg, rgba(7, 22, 51, 0), rgba(7, 22, 51, 0.62) 38%, rgba(7, 22, 51, 0.96)),
-    radial-gradient(circle at center bottom, rgba(213, 43, 30, 0.16), transparent 46%);
+  background: linear-gradient(180deg, rgba(7, 22, 51, 0), rgba(7, 22, 51, 0.72) 44%, rgba(7, 22, 51, 0.96));
 }
 
 html[data-theme="russian"] .primary-action,
@@ -1266,9 +1264,7 @@ select:hover {
   display: grid;
   place-items: end center;
   padding: 18px;
-  background:
-    linear-gradient(180deg, rgba(9, 9, 10, 0), rgba(9, 9, 10, 0.68) 38%, rgba(9, 9, 10, 0.98)),
-    radial-gradient(circle at center bottom, rgba(166, 228, 0, 0.13), transparent 46%);
+  background: linear-gradient(180deg, rgba(9, 9, 10, 0), rgba(9, 9, 10, 0.76) 44%, rgba(9, 9, 10, 0.98));
   backdrop-filter: blur(1.5px);
 }
 
@@ -1281,16 +1277,16 @@ select:hover {
   padding: 0 16px;
   border: 1px solid rgba(166, 228, 0, 0.3);
   border-radius: 999px;
-  background: rgba(166, 228, 0, 0.14);
+  background: rgba(166, 228, 0, 0.1);
   color: var(--green);
   font-weight: 850;
   cursor: pointer;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
+  box-shadow: none;
 }
 
 .show-more-code:hover {
-  background: var(--green);
-  color: #101112;
+  background: rgba(166, 228, 0, 0.18);
+  color: #ffffff;
   transform: translateY(-2px);
 }
 
@@ -2039,6 +2035,15 @@ select:hover {
 
 .profile-section {
   padding: 22px;
+}
+
+.profile-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .badge-row span {
