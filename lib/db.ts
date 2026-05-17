@@ -1,11 +1,14 @@
 import { get, put } from '@vercel/blob';
 import bcrypt from 'bcryptjs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { Database, FileCategory } from './types';
 
 const DB_PATH = 'db/copypast.json';
-const LOCAL_DATA_DIR = path.join(process.cwd(), '.data');
+const LOCAL_DATA_DIR = process.env.VERCEL
+  ? path.join(os.tmpdir(), 'copypast')
+  : path.join(process.cwd(), '.data');
 const LOCAL_DB_PATH = path.join(LOCAL_DATA_DIR, 'copypast-db.json');
 
 function hasVercelBlobToken() {

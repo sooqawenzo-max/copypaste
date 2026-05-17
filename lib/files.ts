@@ -1,9 +1,12 @@
 import { get, put } from '@vercel/blob';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { DocFile } from './types';
 
-const LOCAL_DATA_DIR = path.join(process.cwd(), '.data');
+const LOCAL_DATA_DIR = process.env.VERCEL
+  ? path.join(os.tmpdir(), 'copypast')
+  : path.join(process.cwd(), '.data');
 const LOCAL_UPLOAD_DIR = path.join(LOCAL_DATA_DIR, 'uploads');
 
 const seedContent = `local copypast = {
