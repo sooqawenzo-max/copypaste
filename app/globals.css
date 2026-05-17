@@ -270,7 +270,7 @@ button {
   margin-left: 8px;
   padding: 4px 8px;
   border: 2px solid #8c93ff;
-  border-radius: 8px;
+  border-radius: 999px;
   background: #5865f2;
   color: #ffffff;
   font-size: 12px;
@@ -388,7 +388,7 @@ button {
   align-items: center;
   gap: 10px;
   padding: 0 13px;
-  border-radius: 18px;
+  border-radius: 999px;
   background: #0b0c11;
   color: #8d93a3;
   border: 1px solid transparent;
@@ -522,7 +522,7 @@ button {
   align-items: center;
   margin-left: 0;
   padding: 0 20px;
-  border-radius: 4px;
+  border-radius: 999px;
   color: #c4c4c8;
   border-right: 3px solid transparent;
   max-width: 100%;
@@ -557,11 +557,12 @@ button {
 .collapse-control {
   position: sticky;
   bottom: 0;
-  margin-top: auto;
   flex: 0 0 auto;
-  width: 100%;
   height: 34px;
   border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  margin: auto 10px 10px;
+  width: calc(100% - 20px);
   background: #26272a;
   color: #96989f;
   display: grid;
@@ -646,7 +647,7 @@ p {
 
 .code-frame {
   position: relative;
-  border-radius: 6px;
+  border-radius: 16px;
   background: var(--code);
   border: 1px solid #111;
   overflow: hidden;
@@ -667,15 +668,46 @@ p {
 }
 
 .code-title {
-  height: 34px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 14px;
+  padding: 6px 8px 6px 14px;
   color: #b5b9ff;
   border-bottom: 1px solid #17171a;
   background: #0c0c0d;
   font-size: 13px;
+}
+
+.code-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.code-tool-btn {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid rgba(166, 228, 0, 0.28);
+  border-radius: 999px;
+  background: rgba(166, 228, 0, 0.08);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.code-tool-btn:hover {
+  background: var(--green);
+  color: #101112;
+  transform: translateY(-1px);
 }
 
 pre {
@@ -724,7 +756,7 @@ pre::selection {
   max-width: 560px;
   padding: 18px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 18px;
   background: #202023;
 }
 
@@ -780,7 +812,7 @@ pre::selection {
 .login-card,
 .admin-panel {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 22px;
   background: #1b1c1f;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
 }
@@ -862,7 +894,7 @@ textarea,
 select {
   width: 100%;
   border: 1px solid #383b42;
-  border-radius: 6px;
+  border-radius: 16px;
   background: #101114;
   color: #f6f6f8;
   outline: none;
@@ -909,7 +941,7 @@ select:hover {
   gap: 12px;
   padding: 0 12px;
   border: 1px dashed var(--border-strong);
-  border-radius: 6px;
+  border-radius: 18px;
   background: #141519;
 }
 
@@ -937,7 +969,7 @@ select:hover {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 6px;
+  border-radius: 999px;
   border: 0;
   font-weight: 800;
   cursor: pointer;
@@ -1014,7 +1046,7 @@ select:hover {
   gap: 12px;
   padding: 10px 12px;
   border: 1px solid #2d3036;
-  border-radius: 6px;
+  border-radius: 18px;
   background: #15161a;
 }
 
@@ -1043,7 +1075,7 @@ select:hover {
   display: inline-grid;
   place-items: center;
   border: 1px solid rgba(255, 98, 98, 0.28);
-  border-radius: 6px;
+  border-radius: 999px;
   background: rgba(255, 98, 98, 0.08);
   color: var(--danger);
 }
@@ -1122,7 +1154,7 @@ select:hover {
   gap: 8px;
   padding: 4px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 999px;
   background: #111215;
 }
 
@@ -1130,7 +1162,7 @@ select:hover {
   height: 38px;
   display: grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--muted);
   cursor: pointer;
   transition:
@@ -1226,7 +1258,7 @@ select:hover {
 .config-preview {
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 22px;
   background: #111214;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
 }
@@ -1258,7 +1290,7 @@ select:hover {
   width: min(760px, 100%);
   padding: 32px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 24px;
   background: rgba(27, 28, 31, 0.86);
   backdrop-filter: blur(18px);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.26);

@@ -1,16 +1,25 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronDown, Code2, Lock } from 'lucide-react';
+import { Check, ChevronDown, Code2, Copy, Download, Lock } from 'lucide-react';
 
 type Props = {
   content: string;
   locked?: boolean;
   previewLines?: number;
+  downloadUrl?: string;
+  filename?: string;
 };
 
-export function CodePreview({ content, locked = false, previewLines = 10 }: Props) {
+export function CodePreview({
+  content,
+  locked = false,
+  previewLines = 10,
+  downloadUrl,
+  filename
+}: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
   const { visibleContent, hasMore } = useMemo(() => {
     if (locked) {
       return {
@@ -31,6 +40,12 @@ end`,
     };
   }, [content, expanded, locked, previewLines]);
 
+  async function copyFullFile() {
+    await navigator.clipboard.writeText(content);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  }
+
   return (
     <div
       className={`code-frame ${locked ? 'locked-code' : ''} ${
@@ -40,6 +55,24 @@ end`,
       <div className="code-title">
         {locked ? <Lock size={15} /> : <Code2 size={15} />}
         <span>{locked ? 'Locked preview' : expanded ? 'Full code' : 'Preview'}</span>
+        {!locked ? (
+          <div className="code-tools">
+            <button className="code-tool-btn" onClick={copyFullFile} type="button">
+              {copied ? <Check size={15} /> : <Copy size={15} />}
+              <span>{copied ? 'Скопировано' : 'Скопировать'}</span>
+            </button>
+            {downloadUrl ? (
+              <a
+                className="code-tool-btn"
+                href={downloadUrl}
+                download={filename || true}
+              >
+                <Download size={15} />
+                <span>Скачать</span>
+              </a>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <pre>
         <code>{visibleContent}</code>

@@ -73,10 +73,22 @@ export function Breadcrumbs({
 
 export function CodeFrame({
   content,
-  locked = false
+  locked = false,
+  downloadUrl,
+  filename
 }: {
   content: string;
   locked?: boolean;
+  downloadUrl?: string;
+  filename?: string;
 }) {
-  return <CodePreview content={content} locked={locked} previewLines={10} />;
+  return (
+    <CodePreview
+      content={content}
+      locked={locked}
+      previewLines={10}
+      downloadUrl={downloadUrl}
+      filename={filename}
+    />
+  );
 }

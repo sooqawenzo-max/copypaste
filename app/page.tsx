@@ -126,7 +126,12 @@ export default async function Home({ searchParams }: Props) {
 
                 <section id="example">
                   <h2>{current.category === 'config' ? 'Config' : 'Lua'}</h2>
-                  <CodeFrame content={content} locked={locked} />
+                  <CodeFrame
+                    content={content}
+                    locked={locked}
+                    downloadUrl={user ? `/api/files/${current.id}/content` : undefined}
+                    filename={current.originalName}
+                  />
                   <div className="doc-actions">
                     {user ? (
                       <a href={`/api/files/${current.id}/content`} className="download-link">
