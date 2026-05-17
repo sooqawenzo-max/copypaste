@@ -130,6 +130,12 @@ html[data-theme="russian"] .code-title {
   color: #ffffff;
 }
 
+html[data-theme="russian"] .code-preview-overlay {
+  background:
+    linear-gradient(180deg, rgba(7, 22, 51, 0), rgba(7, 22, 51, 0.62) 38%, rgba(7, 22, 51, 0.96)),
+    radial-gradient(circle at center bottom, rgba(213, 43, 30, 0.16), transparent 46%);
+}
+
 html[data-theme="russian"] .primary-action,
 html[data-theme="russian"] .segment.active {
   background: #d52b1e;
@@ -656,6 +662,10 @@ p {
   transform: translateY(-2px);
 }
 
+.preview-code {
+  max-height: 330px;
+}
+
 .code-title {
   height: 34px;
   display: flex;
@@ -677,6 +687,12 @@ pre {
   font-size: 14px;
   line-height: 1.55;
   transition: filter 320ms var(--ease), opacity 320ms var(--ease);
+}
+
+.preview-code pre {
+  max-height: 286px;
+  overflow: hidden;
+  padding-bottom: 72px;
 }
 
 code {
@@ -1160,6 +1176,47 @@ select:hover {
   color: #ffffff;
   font-weight: 800;
   backdrop-filter: blur(2px);
+}
+
+.code-preview-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 112px;
+  display: grid;
+  place-items: end center;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(9, 9, 10, 0), rgba(9, 9, 10, 0.68) 38%, rgba(9, 9, 10, 0.98)),
+    radial-gradient(circle at center bottom, rgba(166, 228, 0, 0.13), transparent 46%);
+  backdrop-filter: blur(1.5px);
+}
+
+.show-more-code {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid rgba(166, 228, 0, 0.3);
+  border-radius: 999px;
+  background: rgba(166, 228, 0, 0.14);
+  color: var(--green);
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
+}
+
+.show-more-code:hover {
+  background: var(--green);
+  color: #101112;
+  transform: translateY(-2px);
+}
+
+.show-more-code svg {
+  animation: arrowBreathe 1.6s var(--ease) infinite;
 }
 
 .config-preview-section h2 {

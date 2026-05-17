@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Code2, ExternalLink, Home, Lock, Search } from 'lucide-react';
+import { ExternalLink, Home, Search } from 'lucide-react';
 import { PublicUser } from '@/lib/types';
 import { ThemeToggle } from './ThemeToggle';
+import { CodePreview } from './CodePreview';
 
 export function Brand() {
   return (
@@ -77,28 +78,5 @@ export function CodeFrame({
   content: string;
   locked?: boolean;
 }) {
-  const lockedPreview = `local access = request_login()
-local file = "gamesense_locked.lua"
-
-if access then
-  loadstring(file)()
-end`;
-
-  return (
-    <div className={`code-frame ${locked ? 'locked-code' : ''}`}>
-      <div className="code-title">
-        {locked ? <Lock size={15} /> : <Code2 size={15} />}
-        <span>{locked ? 'Locked preview' : 'Example'}</span>
-      </div>
-      <pre>
-        <code>{locked ? lockedPreview : content}</code>
-      </pre>
-      {locked ? (
-        <div className="code-lock-overlay">
-          <Lock size={18} />
-          <span>Login to view code</span>
-        </div>
-      ) : null}
-    </div>
-  );
+  return <CodePreview content={content} locked={locked} previewLines={10} />;
 }
