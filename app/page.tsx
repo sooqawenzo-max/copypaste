@@ -2,13 +2,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   BarChart3,
-  ChevronDown,
-  ChevronRight,
   FileCode2,
   Image as ImageIcon,
   Lock,
   MessageSquare,
-  PanelLeftClose,
   Sparkles,
   TrendingUp,
   Users
@@ -32,10 +29,6 @@ type Props = {
 };
 
 const categories: FileCategory[] = ['lua', 'config'];
-
-function normalizeCategory(category?: string): FileCategory {
-  return category === 'config' ? 'config' : 'lua';
-}
 
 function categoryLabel(category: FileCategory) {
   return category === 'config' ? 'Config' : 'Lua';
@@ -110,21 +103,13 @@ function Avatar({ user, size = 34 }: { user?: PublicUser; size?: number }) {
 
 export default async function Home({ searchParams }: Props) {
   const query = await searchParams;
-  const requestedCategory = normalizeCategory(query.category);
   const search = (query.q || '').trim();
   const [db, user] = await Promise.all([loadDatabase(), getCurrentUser()]);
   const users = db.users.map(({ passwordHash: _passwordHash, ...entry }) => entry);
   const authorMap = new Map(users.map((entry) => [entry.id, entry]));
   const files = db.files.sort((a, b) => a.title.localeCompare(b.title));
   const current = files.find((file) => file.slug === query.file);
-  const selectedCategory = current?.category || requestedCategory;
-  const filteredForSidebar = files.filter(
-    (file) => file.category === selectedCategory && matchFile(file, search)
-  );
   const profileResults = users.filter((entry) => matchUser(entry, search)).slice(0, 6);
-  const forumFiles = files
-    .filter((file) => file.category === selectedCategory && matchFile(file, search))
-    .sort((a, b) => fileUpdatedAt(b) - fileUpdatedAt(a));
   const trendingFiles = [...files]
     .sort((a, b) => fileUpdatedAt(b) - fileUpdatedAt(a))
     .slice(0, 5);
@@ -136,61 +121,90 @@ export default async function Home({ searchParams }: Props) {
   const onlineUsers = users
     .filter((entry) => isOnline(entry) || entry.id === user?.id)
     .slice(0, 8);
-  const categoryFiles = files.filter((file) => file.category === selectedCategory);
-  const screenshotCount = categoryFiles.reduce(
+  const visibleFiles = files.filter((file) => matchFile(file, search));
+  const screenshotCount = visibleFiles.reduce(
     (count, file) => count + (file.screenshots?.length || 0),
     0
   );
+
+  const renderForumBlock = (category: FileCategory) => {
+    const forumFiles = files
+      .filter((file) => file.category === category && matchFile(file, search))
+      .sort((a, b) => fileUpdatedAt(b) - fileUpdatedAt(a));
+
+    return (
+      <div className="forum-block" id={category} key={category}>
+        <div className="forum-block-header">
+          <Link href={`/#${category}`}>{categoryLabel(category)}</Link>
+          <span>{categorySummary(category)}</span>
+        </div>
+
+        <div className="forum-block-body">
+          {forumFiles.length ? (
+            forumFiles.map((file) => {
+              const author = authorMap.get(file.authorId);
+
+              return (
+                <Link
+                  className="forum-node"
+                  href={`/?category=${file.category}&file=${file.slug}${search ? `&q=${encodeURIComponent(search)}` : ''}`}
+                  key={file.id}
+                >
+                  <span className="forum-node-icon" aria-hidden="true">
+                    {file.category === 'config' ? (
+                      <ImageIcon size={19} />
+                    ) : (
+                      <FileCode2 size={19} />
+                    )}
+                  </span>
+                  <span className="forum-node-main">
+                    <strong>{file.title}</strong>
+                    <span className="forum-node-meta">
+                      <span className={`platform-pill platform-${file.platform}`}>
+                        {file.platform}
+                      </span>
+                      {file.tags?.slice(0, 4).map((tag) => (
+                        <em key={tag}>#{tag}</em>
+                      ))}
+                    </span>
+                  </span>
+                  <span className="forum-node-stats">
+                    <span>
+                      <b>{formatFileSize(file.size)}</b>
+                      Size
+                    </span>
+                    <span>
+                      <b>{file.screenshots?.length || 0}</b>
+                      Preview
+                    </span>
+                  </span>
+                  <span className="forum-node-extra">
+                    <Avatar user={author} size={34} />
+                    <span>
+                      <strong>{authorLine(author)}</strong>
+                      <time dateTime={file.updatedAt}>
+                        {new Date(file.updatedAt).toLocaleDateString('ru-RU')}
+                      </time>
+                    </span>
+                  </span>
+                </Link>
+              );
+            })
+          ) : (
+            <div className="forum-empty">
+              No posts found in {categoryLabel(category)}.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
       <TopNav user={user} />
       <div className="docs-shell">
         <DotGridBackground />
-        <aside className="sidebar">
-          <nav className="menu">
-            {categories.map((category) => (
-              <div className="menu-category open" key={category}>
-                <Link className="menu-title menu-title-link" href={`/?category=${category}`}>
-                  <span>{category}</span>
-                  {category === selectedCategory ? (
-                    <ChevronDown className="menu-arrow arrow-open" size={19} />
-                  ) : (
-                    <ChevronRight className="menu-arrow arrow-closed" size={19} />
-                  )}
-                </Link>
-                {category === selectedCategory
-                  ? filteredForSidebar.map((file) => (
-                      <Link
-                        className={`menu-link ${current?.id === file.id ? 'active' : ''}`}
-                        href={`/?category=${category}&file=${file.slug}${search ? `&q=${encodeURIComponent(search)}` : ''}`}
-                        key={file.id}
-                      >
-                        <span className={`platform-dot platform-${file.platform}`} />
-                        {file.title}
-                      </Link>
-                    ))
-                  : null}
-              </div>
-            ))}
-
-            {profileResults.length ? (
-              <div className="menu-category profile-results">
-                <div className="menu-title">profiles</div>
-                {profileResults.map((profile) => (
-                  <Link className="menu-link" href={`/u/${profile.uid}`} key={profile.id}>
-                    <Avatar user={profile} size={20} />
-                    {profile.forumNick}
-                  </Link>
-                ))}
-              </div>
-            ) : null}
-          </nav>
-          <Link className="collapse-control" href="/admin" aria-label="Open admin panel">
-            <PanelLeftClose size={18} />
-          </Link>
-        </aside>
-
         <main className="doc-main">
           <article className="doc-article">
             {!current ? (
@@ -203,10 +217,10 @@ export default async function Home({ searchParams }: Props) {
                     </h1>
                   </div>
                   <div className="forum-heading-actions">
-                    <Link className="ghost-action" href="/?category=lua">
+                    <Link className="ghost-action" href="#lua">
                       Lua
                     </Link>
-                    <Link className="ghost-action" href="/?category=config">
+                    <Link className="ghost-action" href="#config">
                       Config
                     </Link>
                     <Link className="primary-action compact" href="/admin">
@@ -215,72 +229,7 @@ export default async function Home({ searchParams }: Props) {
                   </div>
                 </div>
 
-                <div className="forum-block">
-                  <div className="forum-block-header">
-                    <Link href={`/?category=${selectedCategory}`}>
-                      {categoryLabel(selectedCategory)}
-                    </Link>
-                    <span>{categorySummary(selectedCategory)}</span>
-                  </div>
-
-                  <div className="forum-block-body">
-                    {forumFiles.length ? (
-                      forumFiles.map((file) => {
-                        const author = authorMap.get(file.authorId);
-
-                        return (
-                          <Link
-                            className="forum-node"
-                            href={`/?category=${file.category}&file=${file.slug}${search ? `&q=${encodeURIComponent(search)}` : ''}`}
-                            key={file.id}
-                          >
-                            <span className="forum-node-icon" aria-hidden="true">
-                              {file.category === 'config' ? (
-                                <ImageIcon size={19} />
-                              ) : (
-                                <FileCode2 size={19} />
-                              )}
-                            </span>
-                            <span className="forum-node-main">
-                              <strong>{file.title}</strong>
-                              <span className="forum-node-meta">
-                                <span className={`platform-pill platform-${file.platform}`}>
-                                  {file.platform}
-                                </span>
-                                {file.tags?.slice(0, 4).map((tag) => (
-                                  <em key={tag}>#{tag}</em>
-                                ))}
-                              </span>
-                            </span>
-                            <span className="forum-node-stats">
-                              <span>
-                                <b>{formatFileSize(file.size)}</b>
-                                Size
-                              </span>
-                              <span>
-                                <b>{file.screenshots?.length || 0}</b>
-                                Preview
-                              </span>
-                            </span>
-                            <span className="forum-node-extra">
-                              <Avatar user={author} size={34} />
-                              <span>
-                                <strong>{authorLine(author)}</strong>
-                                <time dateTime={file.updatedAt}>
-                                  {new Date(file.updatedAt).toLocaleDateString('ru-RU')}
-                                </time>
-                              </span>
-                            </span>
-                          </Link>
-                        );
-                      })
-                    ) : (
-                      <div className="forum-empty">
-                        No posts found in {categoryLabel(selectedCategory)}.
-                      </div>
-                    )}
-                  </div>
-                </div>
+                {categories.map((category) => renderForumBlock(category))}
 
                 {profileResults.length ? (
                   <div className="forum-block">
@@ -307,7 +256,7 @@ export default async function Home({ searchParams }: Props) {
                 <div className="forum-quick-stats">
                   <span>
                     <MessageSquare size={17} />
-                    {categoryFiles.length} posts
+                    {visibleFiles.length} posts
                   </span>
                   <span>
                     <ImageIcon size={17} />
