@@ -139,6 +139,7 @@ export async function POST(request: Request) {
       imageStorage: screenshots[0]?.storage,
       imagePath: screenshots[0]?.path,
       screenshots,
+      comments: [],
       authorId: user!.id,
       createdAt: now,
       updatedAt: now

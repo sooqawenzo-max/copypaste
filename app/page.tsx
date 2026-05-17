@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Breadcrumbs, CodeFrame, TopNav } from '@/components/Shell';
 import { DotGridBackground } from '@/components/DotGridBackground';
+import { PostComments } from '@/components/PostComments';
 import { ScreenshotGallery } from '@/components/ScreenshotGallery';
 import { getCurrentUser } from '@/lib/auth';
 import { loadDatabase } from '@/lib/db';
@@ -351,6 +352,13 @@ export default async function Home({ searchParams }: Props) {
                     <strong>{Math.max(1, Math.round(current.size / 1024))} KB</strong>
                   </div>
                 </section>
+
+                <PostComments
+                  fileId={current.id}
+                  comments={current.comments || []}
+                  currentUser={user}
+                  authors={Object.fromEntries(users.map((entry) => [entry.id, entry]))}
+                />
               </>
             )}
           </article>
@@ -360,6 +368,7 @@ export default async function Home({ searchParams }: Props) {
           {current?.screenshots?.length ? <a href="#preview">Preview</a> : null}
           {current ? <a href="#example">{current.category === 'config' ? 'Config' : 'Lua'}</a> : null}
           {current ? <a href="#arguments">Properties</a> : null}
+          {current ? <a href="#comments">Comments</a> : null}
           {!current ? (
             <>
               <div className="forum-widget">

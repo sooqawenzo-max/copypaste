@@ -96,7 +96,7 @@ export function ProfilePanel({
         </section>
       ) : null}
 
-      <section className="profile-section">
+      <section className="profile-section" id="comments">
         <h2>Comments</h2>
         {currentUser ? (
           <form className="comment-form" onSubmit={addComment}>

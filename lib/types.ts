@@ -18,6 +18,13 @@ export type ProfileComment = {
   createdAt: string;
 };
 
+export type FileComment = {
+  id: string;
+  authorId: string;
+  text: string;
+  createdAt: string;
+};
+
 export type User = {
   id: string;
   uid: number;
@@ -50,6 +57,7 @@ export type DocFile = {
   imageStorage?: StorageKind;
   imagePath?: string;
   screenshots: StoredAsset[];
+  comments: FileComment[];
   authorId: string;
   createdAt: string;
   updatedAt: string;
@@ -73,6 +81,7 @@ export type AuditAction =
   | 'user.role'
   | 'invite.created'
   | 'invite.used'
+  | 'file.comment'
   | 'profile.comment'
   | 'profile.updated';
 

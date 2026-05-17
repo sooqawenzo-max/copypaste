@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ExternalLink, Home } from 'lucide-react';
+import { ExternalLink, Home, MessageCircle } from 'lucide-react';
 import { PublicUser } from '@/lib/types';
 import { ThemeToggle } from './ThemeToggle';
 import { CodePreview } from './CodePreview';
 import { SearchBox } from './SearchBox';
-import { CategoryNav } from './CategoryNav';
 import { OnlinePulse } from './OnlinePulse';
 
 export function Brand() {
@@ -26,13 +25,6 @@ export function TopNav({ user }: { user: PublicUser | null }) {
       <div className="nav-inner">
         <div className="nav-left">
           <Brand />
-          <CategoryNav />
-          <Link className="nav-link muted" href="/snippets">
-            Snippets
-          </Link>
-          <Link className="nav-link muted" href="/blog">
-            Blog
-          </Link>
         </div>
         <div className="nav-right">
           <Link className="nav-link get-link profile-top-link" href={user ? `/u/${user.uid}` : '/login'}>
@@ -43,6 +35,10 @@ export function TopNav({ user }: { user: PublicUser | null }) {
           <SearchBox />
         </div>
       </div>
+      <Link className="admin-chat-button" href="/u/1#comments" aria-label="Contact admin">
+        <MessageCircle size={19} />
+        <span>Admin</span>
+      </Link>
     </nav>
   );
 }

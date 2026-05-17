@@ -56,6 +56,7 @@ async function seedDatabase(): Promise<Database> {
         storage: 'local',
         blobPath: 'seed/getting-started.lua',
         screenshots: [],
+        comments: [],
         authorId: 'admin',
         createdAt: now,
         updatedAt: now
@@ -116,7 +117,8 @@ async function normalizeDatabase(db: Database) {
       category: nextCategory,
       platform: file.platform || 'gs',
       tags: file.tags || [],
-      screenshots
+      screenshots,
+      comments: file.comments || []
     };
 
     if (file.id === 'getting-started') {
@@ -146,7 +148,8 @@ async function normalizeDatabase(db: Database) {
       file.category !== nextCategory ||
       !file.platform ||
       !file.tags ||
-      !file.screenshots
+      !file.screenshots ||
+      !file.comments
     ) {
       changed = true;
     }
