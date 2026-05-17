@@ -1,6 +1,18 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronDown, ChevronRight, Lock, PanelLeftClose, Sparkles } from 'lucide-react';
+import {
+  BarChart3,
+  ChevronDown,
+  ChevronRight,
+  FileCode2,
+  Image as ImageIcon,
+  Lock,
+  MessageSquare,
+  PanelLeftClose,
+  Sparkles,
+  TrendingUp,
+  Users
+} from 'lucide-react';
 import { Breadcrumbs, CodeFrame, TopNav } from '@/components/Shell';
 import { DotGridBackground } from '@/components/DotGridBackground';
 import { ScreenshotGallery } from '@/components/ScreenshotGallery';
@@ -25,6 +37,16 @@ function normalizeCategory(category?: string): FileCategory {
   return category === 'config' ? 'config' : 'lua';
 }
 
+function categoryLabel(category: FileCategory) {
+  return category === 'config' ? 'Config' : 'Lua';
+}
+
+function categorySummary(category: FileCategory) {
+  return category === 'config'
+    ? 'Configs with required previews, tags and platform filters.'
+    : 'GameSense Lua posts with previews, authors and protected code.';
+}
+
 function isOnline(user: PublicUser) {
   if (!user.lastSeenAt) return false;
   return Date.now() - new Date(user.lastSeenAt).getTime() < 5 * 60 * 1000;
@@ -37,6 +59,15 @@ function roleClass(role: string) {
 function authorLine(author?: PublicUser) {
   if (!author) return 'unknown';
   return author.forumNick || author.username;
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+function fileUpdatedAt(file: DocFile) {
+  return new Date(file.updatedAt || file.createdAt).getTime();
 }
 
 function matchFile(file: DocFile, query: string) {
@@ -79,24 +110,37 @@ function Avatar({ user, size = 34 }: { user?: PublicUser; size?: number }) {
 
 export default async function Home({ searchParams }: Props) {
   const query = await searchParams;
-  const selectedCategory = normalizeCategory(query.category);
+  const requestedCategory = normalizeCategory(query.category);
   const search = (query.q || '').trim();
   const [db, user] = await Promise.all([loadDatabase(), getCurrentUser()]);
   const users = db.users.map(({ passwordHash: _passwordHash, ...entry }) => entry);
   const authorMap = new Map(users.map((entry) => [entry.id, entry]));
   const files = db.files.sort((a, b) => a.title.localeCompare(b.title));
+  const current = files.find((file) => file.slug === query.file);
+  const selectedCategory = current?.category || requestedCategory;
   const filteredForSidebar = files.filter(
     (file) => file.category === selectedCategory && matchFile(file, search)
   );
   const profileResults = users.filter((entry) => matchUser(entry, search)).slice(0, 6);
-  const current =
-    files.find((file) => file.slug === query.file) ||
-    (query.file ? undefined : undefined);
+  const forumFiles = files
+    .filter((file) => file.category === selectedCategory && matchFile(file, search))
+    .sort((a, b) => fileUpdatedAt(b) - fileUpdatedAt(a));
+  const trendingFiles = [...files]
+    .sort((a, b) => fileUpdatedAt(b) - fileUpdatedAt(a))
+    .slice(0, 5);
+  const latestMember = [...users].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )[0];
   const content = current && user ? await readStoredFileText(current) : '';
   const locked = !user;
   const onlineUsers = users
     .filter((entry) => isOnline(entry) || entry.id === user?.id)
     .slice(0, 8);
+  const categoryFiles = files.filter((file) => file.category === selectedCategory);
+  const screenshotCount = categoryFiles.reduce(
+    (count, file) => count + (file.screenshots?.length || 0),
+    0
+  );
 
   return (
     <>
@@ -150,36 +194,129 @@ export default async function Home({ searchParams }: Props) {
         <main className="doc-main">
           <article className="doc-article">
             {!current ? (
-              <section className="landing-panel">
-                <p className="eyebrow">private gamesense forum</p>
-                <h1 className="landing-title">
-                  <span>copy</span><span>past</span> Docs
-                </h1>
-                <p className="landing-copy">
-                  Lua, configs, screenshots, tags, profiles and audit in one quiet place.
-                </p>
-                <div className="landing-actions">
-                  <Link className="primary-action compact" href="/?category=lua">
-                    Lua
-                  </Link>
-                  <Link className="ghost-action" href="/?category=config">
-                    Config
-                  </Link>
-                  <Link className="ghost-action" href="/admin">
-                    Publish
-                  </Link>
+              <section className="forum-overview">
+                <div className="forum-heading">
+                  <div>
+                    <p className="eyebrow">private gamesense forum</p>
+                    <h1>
+                      <span>copy</span><span>past</span> Docs
+                    </h1>
+                  </div>
+                  <div className="forum-heading-actions">
+                    <Link className="ghost-action" href="/?category=lua">
+                      Lua
+                    </Link>
+                    <Link className="ghost-action" href="/?category=config">
+                      Config
+                    </Link>
+                    <Link className="primary-action compact" href="/admin">
+                      Publish
+                    </Link>
+                  </div>
                 </div>
-                <div className="online-strip">
-                  <span>online</span>
-                  {onlineUsers.length ? (
-                    onlineUsers.map((entry) => (
-                      <Link href={`/u/${entry.uid}`} key={entry.id} title={entry.forumNick}>
-                        <Avatar user={entry} size={28} />
-                      </Link>
-                    ))
-                  ) : (
-                    <em>quiet</em>
-                  )}
+
+                <div className="forum-block">
+                  <div className="forum-block-header">
+                    <Link href={`/?category=${selectedCategory}`}>
+                      {categoryLabel(selectedCategory)}
+                    </Link>
+                    <span>{categorySummary(selectedCategory)}</span>
+                  </div>
+
+                  <div className="forum-block-body">
+                    {forumFiles.length ? (
+                      forumFiles.map((file) => {
+                        const author = authorMap.get(file.authorId);
+
+                        return (
+                          <Link
+                            className="forum-node"
+                            href={`/?category=${file.category}&file=${file.slug}${search ? `&q=${encodeURIComponent(search)}` : ''}`}
+                            key={file.id}
+                          >
+                            <span className="forum-node-icon" aria-hidden="true">
+                              {file.category === 'config' ? (
+                                <ImageIcon size={19} />
+                              ) : (
+                                <FileCode2 size={19} />
+                              )}
+                            </span>
+                            <span className="forum-node-main">
+                              <strong>{file.title}</strong>
+                              <span className="forum-node-meta">
+                                <span className={`platform-pill platform-${file.platform}`}>
+                                  {file.platform}
+                                </span>
+                                {file.tags?.slice(0, 4).map((tag) => (
+                                  <em key={tag}>#{tag}</em>
+                                ))}
+                              </span>
+                            </span>
+                            <span className="forum-node-stats">
+                              <span>
+                                <b>{formatFileSize(file.size)}</b>
+                                Size
+                              </span>
+                              <span>
+                                <b>{file.screenshots?.length || 0}</b>
+                                Preview
+                              </span>
+                            </span>
+                            <span className="forum-node-extra">
+                              <Avatar user={author} size={34} />
+                              <span>
+                                <strong>{authorLine(author)}</strong>
+                                <time dateTime={file.updatedAt}>
+                                  {new Date(file.updatedAt).toLocaleDateString('ru-RU')}
+                                </time>
+                              </span>
+                            </span>
+                          </Link>
+                        );
+                      })
+                    ) : (
+                      <div className="forum-empty">
+                        No posts found in {categoryLabel(selectedCategory)}.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {profileResults.length ? (
+                  <div className="forum-block">
+                    <div className="forum-block-header">
+                      <span>Profiles</span>
+                      <span>Matches by username, forum nick or UID.</span>
+                    </div>
+                    <div className="forum-block-body">
+                      {profileResults.map((profile) => (
+                        <Link className="forum-node compact-node" href={`/u/${profile.uid}`} key={profile.id}>
+                          <span className="forum-node-icon" aria-hidden="true">
+                            <Users size={18} />
+                          </span>
+                          <span className="forum-node-main">
+                            <strong className={roleClass(profile.role)}>{profile.forumNick}</strong>
+                            <span className="forum-node-meta">UID {profile.uid}</span>
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="forum-quick-stats">
+                  <span>
+                    <MessageSquare size={17} />
+                    {categoryFiles.length} posts
+                  </span>
+                  <span>
+                    <ImageIcon size={17} />
+                    {screenshotCount} previews
+                  </span>
+                  <span>
+                    <Users size={17} />
+                    {users.length} members
+                  </span>
                 </div>
               </section>
             ) : (
@@ -263,15 +400,66 @@ export default async function Home({ searchParams }: Props) {
           {current?.screenshots?.length ? <a href="#preview">Preview</a> : null}
           {current ? <a href="#example">{current.category === 'config' ? 'Config' : 'Lua'}</a> : null}
           {current ? <a href="#arguments">Properties</a> : null}
-          <div className="toc-online">
-            <span>Online</span>
-            {onlineUsers.map((entry) => (
-              <Link href={`/u/${entry.uid}`} key={entry.id}>
-                <Avatar user={entry} size={24} />
-                <span className={roleClass(entry.role)}>{entry.forumNick}</span>
-              </Link>
-            ))}
-          </div>
+          {!current ? (
+            <>
+              <div className="forum-widget">
+                <h3>
+                  <Users size={16} />
+                  Members online
+                </h3>
+                <div className="widget-online-list">
+                  {onlineUsers.length ? (
+                    onlineUsers.map((entry) => (
+                      <Link href={`/u/${entry.uid}`} key={entry.id}>
+                        <Avatar user={entry} size={24} />
+                        <span className={roleClass(entry.role)}>{entry.forumNick}</span>
+                      </Link>
+                    ))
+                  ) : (
+                    <span className="widget-muted">quiet</span>
+                  )}
+                </div>
+              </div>
+              <div className="forum-widget">
+                <h3>
+                  <TrendingUp size={16} />
+                  Trending content
+                </h3>
+                {trendingFiles.map((file) => (
+                  <Link href={`/?category=${file.category}&file=${file.slug}`} key={file.id}>
+                    <span>{file.title}</span>
+                  </Link>
+                ))}
+              </div>
+              <div className="forum-widget">
+                <h3>
+                  <BarChart3 size={16} />
+                  Forum statistics
+                </h3>
+                <dl className="forum-stat-list">
+                  <dt>Lua</dt>
+                  <dd>{files.filter((file) => file.category === 'lua').length}</dd>
+                  <dt>Config</dt>
+                  <dd>{files.filter((file) => file.category === 'config').length}</dd>
+                  <dt>Members</dt>
+                  <dd>{users.length}</dd>
+                  <dt>Latest member</dt>
+                  <dd>{latestMember ? authorLine(latestMember) : 'none'}</dd>
+                </dl>
+              </div>
+            </>
+          ) : null}
+          {current ? (
+            <div className="toc-online">
+              <span>Online</span>
+              {onlineUsers.map((entry) => (
+                <Link href={`/u/${entry.uid}`} key={entry.id}>
+                  <Avatar user={entry} size={24} />
+                  <span className={roleClass(entry.role)}>{entry.forumNick}</span>
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </aside>
       </div>
     </>
