@@ -763,7 +763,56 @@ pre {
   font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
   font-size: 14px;
   line-height: 1.55;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(166, 228, 0, 0.55) #050506;
   transition: filter 320ms var(--ease), opacity 320ms var(--ease);
+}
+
+.code-frame pre::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.code-frame pre::-webkit-scrollbar-track {
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01)),
+    #050506;
+}
+
+.code-frame pre::-webkit-scrollbar-thumb {
+  min-width: 36px;
+  border: 3px solid #050506;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(166, 228, 0, 0.84), rgba(116, 160, 0, 0.84));
+  box-shadow: 0 0 16px rgba(166, 228, 0, 0.16);
+}
+
+.code-frame pre::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(90deg, rgba(188, 255, 24, 0.96), rgba(145, 200, 0, 0.96));
+}
+
+.code-frame pre::-webkit-scrollbar-corner {
+  background: #050506;
+}
+
+html[data-theme="russian"] .code-frame pre {
+  scrollbar-color: rgba(213, 43, 30, 0.56) #071633;
+}
+
+html[data-theme="russian"] .code-frame pre::-webkit-scrollbar-track {
+  border-color: rgba(0, 57, 166, 0.14);
+  background: #071633;
+}
+
+html[data-theme="russian"] .code-frame pre::-webkit-scrollbar-thumb {
+  border-color: #071633;
+  background:
+    linear-gradient(90deg, rgba(0, 57, 166, 0.78), rgba(213, 43, 30, 0.78));
+  box-shadow: 0 0 16px rgba(0, 57, 166, 0.14);
 }
 
 .preview-code pre {
