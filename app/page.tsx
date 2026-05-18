@@ -275,6 +275,11 @@ export default async function Home({ searchParams }: Props) {
                         >
                           Config
                         </Link>
+                        {canOpenAdmin ? (
+                          <Link className="ghost-action" href="/admin">
+                            Publish
+                          </Link>
+                        ) : null}
                       </>
                     ) : canOpenAdmin ? (
                       <Link className="ghost-action" href="/admin">
