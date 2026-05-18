@@ -27,6 +27,7 @@ function Avatar({ user }: { user?: PublicUser }) {
       alt=""
       width={30}
       height={30}
+      unoptimized
     />
   ) : (
     <span className="avatar-fallback comment-avatar">
@@ -43,10 +44,11 @@ export function PostComments({ fileId, comments, currentUser, authors }: Props) 
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setBusy(true);
     setMessage('');
 
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const response = await fetch(`/api/files/${fileId}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -60,7 +62,7 @@ export function PostComments({ fileId, comments, currentUser, authors }: Props) 
       return;
     }
 
-    event.currentTarget.reset();
+    formElement.reset();
     router.refresh();
   }
 

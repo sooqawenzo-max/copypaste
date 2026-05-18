@@ -26,9 +26,10 @@ export function ProfilePanel({
   const canComment = currentUser?.role === 'owner' || currentUser?.role === 'admin';
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     const response = await fetch(`/api/profiles/${profile.uid}`, {
       method: 'PATCH',
-      body: new FormData(event.currentTarget)
+      body: new FormData(formElement)
     });
     const body = await response.json().catch(() => ({}));
     setMessage(response.ok ? 'Profile saved' : body.error || 'Save failed');
@@ -37,7 +38,8 @@ export function ProfilePanel({
 
   async function addComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const response = await fetch(`/api/profiles/${profile.uid}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -45,7 +47,7 @@ export function ProfilePanel({
     });
     const body = await response.json().catch(() => ({}));
     setMessage(response.ok ? 'Comment posted' : body.error || 'Comment failed');
-    if (response.ok) event.currentTarget.reset();
+    if (response.ok) formElement.reset();
     router.refresh();
   }
 
@@ -68,6 +70,7 @@ export function ProfilePanel({
               alt=""
               width={132}
               height={132}
+              unoptimized
               className="profile-avatar"
             />
           ) : (

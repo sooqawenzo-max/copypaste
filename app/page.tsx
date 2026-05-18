@@ -125,6 +125,7 @@ function Avatar({ user, size = 34 }: { user?: PublicUser; size?: number }) {
       alt=""
       width={size}
       height={size}
+      unoptimized
       style={{ width: size, height: size }}
     />
   ) : (
