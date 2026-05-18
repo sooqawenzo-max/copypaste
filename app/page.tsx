@@ -27,19 +27,21 @@ type Props = {
   searchParams: Promise<{
     file?: string;
     category?: string;
+    type?: string;
     q?: string;
   }>;
 };
 
 type SectionFilter = 'docs' | 'folder';
-
-function normalizeCategory(category?: string): FileCategory {
-  if (category === 'folder') return 'folder';
-  return category === 'config' ? 'config' : 'lua';
-}
+type DocsFilter = 'all' | 'lua' | 'config';
 
 function normalizeSection(category?: string): SectionFilter {
   return category === 'folder' ? 'folder' : 'docs';
+}
+
+function normalizeDocsFilter(type?: string): DocsFilter {
+  if (type === 'lua' || type === 'config') return type;
+  return 'all';
 }
 
 function categoryLabel(category: FileCategory) {
@@ -100,6 +102,10 @@ function fileBelongsToSection(file: DocFile, section: SectionFilter) {
     : file.category === 'lua' || file.category === 'config';
 }
 
+function fileMatchesDocsFilter(file: DocFile, filter: DocsFilter) {
+  return filter === 'all' || file.category === filter;
+}
+
 function matchUser(user: PublicUser, query: string) {
   if (!query) return false;
   const q = query.toLowerCase();
@@ -140,6 +146,7 @@ export default async function Home({ searchParams }: Props) {
   const files = db.files.sort((a, b) => a.title.localeCompare(b.title));
   const current = files.find((file) => file.slug === query.file);
   const selectedSection = current ? (current.category === 'folder' ? 'folder' : 'docs') : normalizeSection(query.category);
+  const selectedDocsFilter = normalizeDocsFilter(query.type);
   const profileResults = users.filter((entry) => matchUser(entry, search)).slice(0, 6);
   const trendingFiles = [...files]
     .sort((a, b) => fileUpdatedAt(b) - fileUpdatedAt(a))
@@ -154,6 +161,7 @@ export default async function Home({ searchParams }: Props) {
   const visibleFiles = files.filter(
     (file) =>
       fileBelongsToSection(file, selectedSection) &&
+      (selectedSection === 'folder' || fileMatchesDocsFilter(file, selectedDocsFilter)) &&
       matchFile(file, search)
   );
   const screenshotCount = visibleFiles.reduce(
@@ -253,19 +261,22 @@ export default async function Home({ searchParams }: Props) {
                     </h1>
                   </div>
                   <div className="forum-heading-actions">
-                    <Link
-                      className={selectedSection === 'docs' ? 'primary-action compact' : 'ghost-action'}
-                      href="/?category=docs"
-                    >
-                      Docs
-                    </Link>
-                    <Link
-                      className={selectedSection === 'folder' ? 'primary-action compact' : 'ghost-action'}
-                      href="/?category=folder"
-                    >
-                      Folder
-                    </Link>
-                    {canOpenAdmin ? (
+                    {selectedSection === 'docs' ? (
+                      <>
+                        <Link
+                          className={selectedDocsFilter === 'lua' ? 'primary-action compact' : 'ghost-action'}
+                          href="/?category=docs&type=lua"
+                        >
+                          Lua
+                        </Link>
+                        <Link
+                          className={selectedDocsFilter === 'config' ? 'primary-action compact' : 'ghost-action'}
+                          href="/?category=docs&type=config"
+                        >
+                          Config
+                        </Link>
+                      </>
+                    ) : canOpenAdmin ? (
                       <Link className="ghost-action" href="/admin">
                         Publish
                       </Link>
@@ -275,7 +286,9 @@ export default async function Home({ searchParams }: Props) {
 
                 {selectedSection === 'folder'
                   ? renderForumBlock('folder')
-                  : (['lua', 'config'] as FileCategory[]).map((category) => renderForumBlock(category))}
+                  : (selectedDocsFilter === 'all'
+                    ? (['lua', 'config'] as FileCategory[]).map((category) => renderForumBlock(category))
+                    : renderForumBlock(selectedDocsFilter))}
 
                 {profileResults.length ? (
                   <div className="forum-block">

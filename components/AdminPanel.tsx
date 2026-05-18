@@ -114,9 +114,10 @@ export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props)
 
   async function createUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setMessage('');
 
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const response = await fetch('/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -133,7 +134,7 @@ export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props)
       return;
     }
 
-    event.currentTarget.reset();
+    formElement.reset();
     setMessage('Profile created');
     router.refresh();
   }
