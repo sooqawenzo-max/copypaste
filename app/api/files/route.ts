@@ -4,7 +4,7 @@ import { addAuditLog, loadDatabase, saveDatabase } from '@/lib/db';
 import { savePostedContent, slugify } from '@/lib/files';
 import { DocFile, FileCategory, Platform, StoredAsset } from '@/lib/types';
 
-const categories: FileCategory[] = ['lua', 'config'];
+const categories: FileCategory[] = ['lua', 'config', 'folder'];
 const platforms: Platform[] = ['nl', 'gs'];
 
 function parseTags(input: FormDataEntryValue | null) {
@@ -16,6 +16,11 @@ function parseTags(input: FormDataEntryValue | null) {
 }
 
 export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Login required' }, { status: 401 });
+  }
+
   const db = await loadDatabase();
   return NextResponse.json(
     {
@@ -49,6 +54,10 @@ export async function POST(request: Request) {
     const tags = parseTags(form.get('tags'));
     const content = String(form.get('content') || '');
     const uploaded = form.get('file');
+    const folderInputs = form.getAll('files');
+    const folderFiles = folderInputs.filter(
+      (entry): entry is File => entry instanceof File && entry.size > 0
+    ).slice(0, 12);
     const imageInputs = [...form.getAll('images'), ...form.getAll('image')];
     const images = imageInputs.filter(
       (entry): entry is File =>
@@ -59,19 +68,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
-    let filename = `${slugify(title)}.txt`;
+    let filename = category === 'folder' ? `${slugify(title)}.folder` : `${slugify(title)}.txt`;
     let mime = 'text/plain';
-    let size = Buffer.byteLength(content);
-    let body: Blob | Buffer | string = content;
+    let size = category === 'folder'
+      ? folderFiles.reduce((total, file) => total + file.size, 0)
+      : Buffer.byteLength(content);
+    let body: Blob | Buffer | string = category === 'folder'
+      ? `folder ${title}\n${folderFiles.map((file) => file.name).join('\n')}`
+      : content;
 
-    if (uploaded instanceof File && uploaded.size > 0) {
+    if (category !== 'folder' && uploaded instanceof File && uploaded.size > 0) {
       filename = uploaded.name;
       mime = uploaded.type || 'text/plain';
       size = uploaded.size;
       body = uploaded;
     }
 
-    if (!content && !(uploaded instanceof File && uploaded.size > 0)) {
+    if (
+      category === 'folder' &&
+      folderFiles.length === 0
+    ) {
+      return NextResponse.json(
+        { error: 'Folders require at least one Lua/config file' },
+        { status: 400 }
+      );
+    }
+
+    if (
+      category !== 'folder' &&
+      !content &&
+      !(uploaded instanceof File && uploaded.size > 0)
+    ) {
       return NextResponse.json(
         { error: 'Paste content or choose a file' },
         { status: 400 }
@@ -100,6 +127,25 @@ export async function POST(request: Request) {
     }
 
     const stored = await savePostedContent({ id, filename, mime, body });
+    const attachments: StoredAsset[] = [];
+    for (const file of folderFiles) {
+      const storedFile = await savePostedContent({
+        id,
+        filename: file.name,
+        mime: file.type || 'application/octet-stream',
+        body: file,
+        folder: 'files'
+      });
+
+      attachments.push({
+        id: crypto.randomUUID(),
+        name: file.name,
+        mime: file.type || 'application/octet-stream',
+        storage: storedFile.storage,
+        path: storedFile.blobPath,
+        size: file.size
+      });
+    }
     const screenshots: StoredAsset[] = [];
 
     for (const image of images) {
@@ -116,7 +162,8 @@ export async function POST(request: Request) {
         name: image.name,
         mime: image.type,
         storage: storedImage.storage,
-        path: storedImage.blobPath
+        path: storedImage.blobPath,
+        size: image.size
       });
     }
 
@@ -139,6 +186,7 @@ export async function POST(request: Request) {
       imageStorage: screenshots[0]?.storage,
       imagePath: screenshots[0]?.path,
       screenshots,
+      attachments,
       comments: [],
       authorId: user!.id,
       createdAt: now,

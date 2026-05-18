@@ -1,6 +1,6 @@
 export type Role = 'owner' | 'admin' | 'user';
 export type StorageKind = 'blob' | 'local';
-export type FileCategory = 'lua' | 'config';
+export type FileCategory = 'lua' | 'config' | 'folder';
 export type Platform = 'nl' | 'gs';
 
 export type StoredAsset = {
@@ -9,6 +9,7 @@ export type StoredAsset = {
   mime: string;
   storage: StorageKind;
   path: string;
+  size?: number;
 };
 
 export type ProfileComment = {
@@ -57,6 +58,7 @@ export type DocFile = {
   imageStorage?: StorageKind;
   imagePath?: string;
   screenshots: StoredAsset[];
+  attachments: StoredAsset[];
   comments: FileComment[];
   authorId: string;
   createdAt: string;
@@ -78,6 +80,7 @@ export type AuditAction =
   | 'file.updated'
   | 'file.deleted'
   | 'user.created'
+  | 'user.deleted'
   | 'user.role'
   | 'invite.created'
   | 'invite.used'

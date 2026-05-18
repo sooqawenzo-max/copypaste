@@ -56,6 +56,7 @@ async function seedDatabase(): Promise<Database> {
         storage: 'local',
         blobPath: 'seed/getting-started.lua',
         screenshots: [],
+        attachments: [],
         comments: [],
         authorId: 'admin',
         createdAt: now,
@@ -68,6 +69,7 @@ async function seedDatabase(): Promise<Database> {
 }
 
 function normalizeCategory(category: string): FileCategory {
+  if (category.toLowerCase() === 'folder') return 'folder';
   return category.toLowerCase() === 'config' ? 'config' : 'lua';
 }
 
@@ -118,6 +120,7 @@ async function normalizeDatabase(db: Database) {
       platform: file.platform || 'gs',
       tags: file.tags || [],
       screenshots,
+      attachments: file.attachments || [],
       comments: file.comments || []
     };
 
@@ -140,7 +143,8 @@ async function normalizeDatabase(db: Database) {
         platform: 'gs' as const,
         tags: ['starter', 'gamesense'],
         originalName: 'lua.lua',
-        screenshots: []
+        screenshots: [],
+        attachments: []
       };
     }
 
@@ -149,6 +153,7 @@ async function normalizeDatabase(db: Database) {
       !file.platform ||
       !file.tags ||
       !file.screenshots ||
+      !file.attachments ||
       !file.comments
     ) {
       changed = true;

@@ -1,10 +1,13 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { DotGridBackground } from '@/components/DotGridBackground';
 import { TopNav } from '@/components/Shell';
-import { getCurrentUser } from '@/lib/auth';
+import { canPublish, getCurrentUser } from '@/lib/auth';
 
 export default async function SnippetsPage() {
   const user = await getCurrentUser();
+  if (!user) redirect('/login');
+  const canOpenAdmin = canPublish(user.role);
 
   return (
     <>
@@ -19,12 +22,14 @@ export default async function SnippetsPage() {
             publish tiny helpers, callbacks, UI patterns, and config notes.
           </p>
           <div className="simple-actions">
-            <Link className="primary-action compact" href="/?category=lua">
-              Browse lua
+            <Link className="primary-action compact" href="/?category=docs">
+              Browse docs
             </Link>
-            <Link className="ghost-action" href="/admin">
-              Post snippet
-            </Link>
+            {canOpenAdmin ? (
+              <Link className="ghost-action" href="/admin">
+                Post snippet
+              </Link>
+            ) : null}
           </div>
         </section>
       </main>

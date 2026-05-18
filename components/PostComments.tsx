@@ -4,7 +4,7 @@ import { FormEvent, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { MessageCircle, Send } from 'lucide-react';
+import { MessageCircle, Send, Trash2 } from 'lucide-react';
 import { FileComment, PublicUser } from '@/lib/types';
 
 type Props = {
@@ -39,6 +39,7 @@ export function PostComments({ fileId, comments, currentUser, authors }: Props) 
   const router = useRouter();
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const canComment = currentUser?.role === 'owner' || currentUser?.role === 'admin';
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,6 +61,18 @@ export function PostComments({ fileId, comments, currentUser, authors }: Props) 
     }
 
     event.currentTarget.reset();
+    router.refresh();
+  }
+
+  async function deleteComment(commentId: string) {
+    const response = await fetch(`/api/files/${fileId}/comments/${commentId}`, {
+      method: 'DELETE'
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setMessage(body.error || 'Delete failed');
+      return;
+    }
     router.refresh();
   }
 
@@ -88,6 +101,16 @@ export function PostComments({ fileId, comments, currentUser, authors }: Props) 
                     <time dateTime={comment.createdAt}>
                       {new Date(comment.createdAt).toLocaleString('ru-RU')}
                     </time>
+                    {canComment ? (
+                      <button
+                        className="comment-delete"
+                        onClick={() => deleteComment(comment.id)}
+                        type="button"
+                        aria-label="Delete comment"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    ) : null}
                   </div>
                   <p>{comment.text}</p>
                 </div>
@@ -99,7 +122,7 @@ export function PostComments({ fileId, comments, currentUser, authors }: Props) 
         )}
       </div>
 
-      {currentUser ? (
+      {canComment ? (
         <form className="post-comment-form" onSubmit={submit}>
           <input name="text" placeholder="Write a comment" maxLength={1200} />
           <button className="primary-action compact" type="submit" disabled={busy}>
@@ -107,11 +130,7 @@ export function PostComments({ fileId, comments, currentUser, authors }: Props) 
             Post
           </button>
         </form>
-      ) : (
-        <Link className="mini-link" href="/login">
-          Login to comment
-        </Link>
-      )}
+      ) : null}
       {message ? <p className="form-message danger-text">{message}</p> : null}
     </section>
   );

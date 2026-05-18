@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
   const user = await getCurrentUser();
-  if (!canPublish(user?.role)) redirect('/login');
+  if (!user) redirect('/login');
+  if (!canPublish(user.role)) redirect('/');
 
   const db = await loadDatabase();
   const users = isOwner(user?.role) ? db.users.map(toPublicUser) : [];

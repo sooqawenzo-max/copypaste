@@ -1211,6 +1211,10 @@ select:hover {
   background: #111215;
 }
 
+.segmented-field.triple {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .segment {
   height: 38px;
   display: grid;
@@ -2013,6 +2017,23 @@ select:hover {
   gap: 12px;
 }
 
+.comment-delete {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(255, 98, 98, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 98, 98, 0.07);
+  color: var(--danger);
+  cursor: pointer;
+}
+
+.comment-delete:hover {
+  background: rgba(255, 98, 98, 0.15);
+  transform: translateY(-1px);
+}
+
 .post-comment-head a {
   font-weight: 900;
 }
@@ -2192,6 +2213,49 @@ select:hover {
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr) minmax(220px, 0.6fr);
   gap: 14px;
   align-items: start;
+}
+
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.folder-asset-list {
+  display: grid;
+  gap: 10px;
+}
+
+.folder-asset {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+}
+
+.folder-asset:hover {
+  border-color: rgba(166, 228, 0, 0.28);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.folder-asset span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-asset em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 12px;
 }
 
 .audit-console {

@@ -4,7 +4,7 @@ import { addAuditLog, loadDatabase, saveDatabase } from '@/lib/db';
 import { savePostedContent, slugify } from '@/lib/files';
 import { FileCategory, Platform, StoredAsset } from '@/lib/types';
 
-const categories: FileCategory[] = ['lua', 'config'];
+const categories: FileCategory[] = ['lua', 'config', 'folder'];
 const platforms: Platform[] = ['nl', 'gs'];
 
 function parseTags(input: FormDataEntryValue | null) {
@@ -137,7 +137,8 @@ export async function PATCH(
         name: image.name,
         mime: image.type,
         storage: storedImage.storage,
-        path: storedImage.blobPath
+        path: storedImage.blobPath,
+        size: image.size
       });
     }
     file.screenshots = screenshots;
@@ -145,6 +146,34 @@ export async function PATCH(
     file.imageMime = screenshots[0]?.mime;
     file.imageStorage = screenshots[0]?.storage;
     file.imagePath = screenshots[0]?.path;
+  }
+
+  const folderInputs = form.getAll('files');
+  const folderFiles = folderInputs.filter(
+    (entry): entry is File => entry instanceof File && entry.size > 0
+  ).slice(0, 12);
+
+  if (folderFiles.length) {
+    const attachments: StoredAsset[] = [];
+    for (const folderFile of folderFiles) {
+      const storedFile = await savePostedContent({
+        id,
+        filename: folderFile.name,
+        mime: folderFile.type || 'application/octet-stream',
+        body: folderFile,
+        folder: 'files'
+      });
+      attachments.push({
+        id: crypto.randomUUID(),
+        name: folderFile.name,
+        mime: folderFile.type || 'application/octet-stream',
+        storage: storedFile.storage,
+        path: storedFile.blobPath,
+        size: folderFile.size
+      });
+    }
+    file.attachments = attachments;
+    file.size = attachments.reduce((total, asset) => total + (asset.size || 0), 0);
   }
 
   file.updatedAt = new Date().toISOString();

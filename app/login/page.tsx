@@ -34,7 +34,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push('/admin');
+    router.push('/');
     router.refresh();
   }
 
@@ -42,7 +42,7 @@ export default function LoginPage() {
     <main className="login-page">
       <div className="login-card">
         <Brand />
-        <h1>Admin login</h1>
+        <h1>Login</h1>
         <form className="stack-form" onSubmit={submit}>
           <label>
             Username

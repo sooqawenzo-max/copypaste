@@ -4,6 +4,7 @@ import { FormEvent, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
+  Files,
   ImagePlus,
   KeyRound,
   LogOut,
@@ -23,16 +24,32 @@ type Props = {
   inviteKeys: InviteKey[];
 };
 
+function sectionHref(file: DocFile) {
+  const section = file.category === 'folder' ? 'folder' : 'docs';
+  return `/?category=${section}&file=${file.slug}`;
+}
+
+function postedMeta(file: DocFile) {
+  const kind =
+    file.category === 'folder'
+      ? `${file.attachments?.length || 0} files`
+      : file.platform;
+  return `${file.category} / ${kind} / ${new Date(file.updatedAt).toLocaleDateString('ru-RU')}`;
+}
+
 export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const folderInput = useRef<HTMLInputElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [category, setCategory] = useState<FileCategory>('lua');
   const [platform, setPlatform] = useState<Platform>('gs');
   const [editing, setEditing] = useState<DocFile | null>(null);
+
+  const isOwner = user.role === 'owner';
 
   async function submitFile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,12 +72,13 @@ export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props)
 
       formElement.reset();
       if (fileInput.current) fileInput.current.value = '';
+      if (folderInput.current) folderInput.current.value = '';
       if (imageInput.current) imageInput.current.value = '';
       setEditing(null);
       setCategory('lua');
       setPlatform('gs');
       setMessage(editing ? 'File updated' : 'File published');
-      router.push(`/?category=${body.file.category}&file=${body.file.slug}`);
+      router.push(sectionHref(body.file));
       router.refresh();
     } catch {
       setMessage('Network error while saving. Try again.');
@@ -71,11 +89,12 @@ export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props)
 
   async function deleteFile(id: string) {
     const response = await fetch(`/api/files/${id}`, { method: 'DELETE' });
+    const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
       setMessage(body.error || 'Delete failed');
       return;
     }
+    setMessage('File deleted');
     router.refresh();
   }
 
@@ -84,6 +103,13 @@ export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props)
     setCategory(file.category);
     setPlatform(file.platform || 'gs');
     window.requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: 'smooth' }));
+  }
+
+  function cancelEdit() {
+    setEditing(null);
+    setCategory('lua');
+    setPlatform('gs');
+    formRef.current?.reset();
   }
 
   async function createUser(event: FormEvent<HTMLFormElement>) {
@@ -125,6 +151,18 @@ export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props)
       return;
     }
 
+    setMessage('Role updated');
+    router.refresh();
+  }
+
+  async function deleteUser(id: string) {
+    const response = await fetch(`/api/users/${id}/role`, { method: 'DELETE' });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setMessage(body.error || 'User delete failed');
+      return;
+    }
+    setMessage('User deleted');
     router.refresh();
   }
 
@@ -145,29 +183,28 @@ export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props)
     router.refresh();
   }
 
-  const isOwner = user.role === 'owner';
-
   return (
     <div className="admin-grid">
       <section className="admin-panel">
         <div className="panel-heading">
           <div>
             <p className="eyebrow">{editing ? 'Editing' : 'Publishing'}</p>
-            <h1>{editing ? editing.title : 'Post Lua or config'}</h1>
+            <h1>{editing ? editing.title : 'Post docs or folder'}</h1>
           </div>
           <button className="ghost-action" onClick={logout} type="button">
             <LogOut size={16} />
             Logout
           </button>
         </div>
-        <form className="stack-form" ref={formRef} onSubmit={submitFile}>
+
+        <form className="stack-form" key={editing?.id || 'new-post'} ref={formRef} onSubmit={submitFile}>
           <label>
             Title
             <input name="title" placeholder="ragebot_helper" defaultValue={editing?.title || ''} required />
           </label>
 
-          <div className="segmented-field" aria-label="Post category">
-            {(['lua', 'config'] as FileCategory[]).map((entry) => (
+          <div className="segmented-field triple" aria-label="Post category">
+            {(['lua', 'config', 'folder'] as FileCategory[]).map((entry) => (
               <label className={category === entry ? 'segment active' : 'segment'} key={entry}>
                 <input
                   type="radio"
@@ -207,14 +244,27 @@ export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props)
               name="content"
               rows={12}
               spellCheck={false}
-              placeholder={editing ? 'Paste new content only if you want to replace the file' : 'local function main()\n  print("copypast")\nend'}
+              disabled={category === 'folder'}
+              placeholder={
+                category === 'folder'
+                  ? 'Folder uses the files below'
+                  : editing
+                    ? 'Paste new content only if you want to replace the file'
+                    : 'local function main()\n  print("copypast")\nend'
+              }
             />
           </label>
 
           <label className="file-box">
             <Upload size={18} />
-            <span>Choose Lua/config file</span>
-            <input ref={fileInput} type="file" name="file" />
+            <span>Single Lua/config file</span>
+            <input ref={fileInput} type="file" name="file" disabled={category === 'folder'} />
+          </label>
+
+          <label className="file-box">
+            <Files size={18} />
+            <span>Folder files, max 12</span>
+            <input ref={folderInput} type="file" name="files" multiple disabled={category !== 'folder'} />
           </label>
 
           <label className="file-box image-required">
@@ -228,7 +278,7 @@ export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props)
             {busy ? 'Saving...' : editing ? 'Save changes' : 'Publish'}
           </button>
           {editing ? (
-            <button className="ghost-action" onClick={() => setEditing(null)} type="button">
+            <button className="ghost-action" onClick={cancelEdit} type="button">
               Cancel edit
             </button>
           ) : null}
@@ -248,14 +298,14 @@ export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props)
             <div className="posted-row" key={file.id}>
               <div>
                 <strong>{file.title}</strong>
-                <span>{file.category} · {file.platform} · {new Date(file.updatedAt).toLocaleDateString('ru-RU')}</span>
+                <span>{postedMeta(file)}</span>
               </div>
               <div className="posted-actions">
                 <button className="mini-link" onClick={() => startEdit(file)} type="button">
                   <Pencil size={14} />
                   Edit
                 </button>
-                <Link className="mini-link" href={`/?category=${file.category}&file=${file.slug}`}>
+                <Link className="mini-link" href={sectionHref(file)}>
                   Open
                 </Link>
                 <button className="icon-danger" onClick={() => deleteFile(file.id)} type="button" aria-label={`Delete ${file.title}`}>
@@ -297,15 +347,20 @@ export function AdminPanel({ user, files, users, auditLogs, inviteKeys }: Props)
                 <div className="user-row" key={entry.id}>
                   <div>
                     <strong className={`role-name role-${entry.role}`}>{entry.forumNick}</strong>
-                    <span>uid {entry.uid} · {entry.role}</span>
+                    <span>uid {entry.uid} / {entry.role}</span>
                   </div>
                   {entry.role === 'owner' ? (
                     <span className="owner-pill">locked owner</span>
                   ) : (
-                    <select value={entry.role} onChange={(event) => updateRole(entry.id, event.target.value as Role)}>
-                      <option value="admin">admin</option>
-                      <option value="user">user</option>
-                    </select>
+                    <div className="user-actions">
+                      <select value={entry.role} onChange={(event) => updateRole(entry.id, event.target.value as Role)}>
+                        <option value="admin">admin</option>
+                        <option value="user">user</option>
+                      </select>
+                      <button className="icon-danger" onClick={() => deleteUser(entry.id)} type="button" aria-label={`Delete ${entry.username}`}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}

@@ -3,7 +3,7 @@
 import { FormEvent, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Camera, MessageSquare, Save } from 'lucide-react';
+import { Camera, MessageSquare, Save, Trash2 } from 'lucide-react';
 import { PublicUser } from '@/lib/types';
 
 type Props = {
@@ -23,6 +23,7 @@ export function ProfilePanel({
   const avatarRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState('');
   const canEdit = currentUser?.id === profile.id || currentUser?.role === 'owner';
+  const canComment = currentUser?.role === 'owner' || currentUser?.role === 'admin';
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const response = await fetch(`/api/profiles/${profile.uid}`, {
@@ -45,6 +46,15 @@ export function ProfilePanel({
     const body = await response.json().catch(() => ({}));
     setMessage(response.ok ? 'Comment posted' : body.error || 'Comment failed');
     if (response.ok) event.currentTarget.reset();
+    router.refresh();
+  }
+
+  async function deleteComment(commentId: string) {
+    const response = await fetch(`/api/profiles/${profile.uid}/comments/${commentId}`, {
+      method: 'DELETE'
+    });
+    const body = await response.json().catch(() => ({}));
+    setMessage(response.ok ? 'Comment deleted' : body.error || 'Delete failed');
     router.refresh();
   }
 
@@ -98,7 +108,7 @@ export function ProfilePanel({
 
       <section className="profile-section" id="comments">
         <h2>Comments</h2>
-        {currentUser ? (
+        {canComment ? (
           <form className="comment-form" onSubmit={addComment}>
             <input name="text" placeholder="Write a comment" />
             <button className="primary-action compact" type="submit">
@@ -116,6 +126,16 @@ export function ProfilePanel({
                   {author?.forumNick || 'unknown'}
                 </strong>
                 <span>{new Date(comment.createdAt).toLocaleString('ru-RU')}</span>
+                {canComment ? (
+                  <button
+                    className="comment-delete"
+                    onClick={() => deleteComment(comment.id)}
+                    type="button"
+                    aria-label="Delete comment"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                ) : null}
                 <p>{comment.text}</p>
               </div>
             );

@@ -5,25 +5,18 @@ import { useSearchParams } from 'next/navigation';
 
 export function CategoryNav() {
   const params = useSearchParams();
-  const category = params.get('category') === 'config'
-    ? 'config'
-    : params.get('category') === 'lua'
-      ? 'lua'
-      : 'all';
+  const section = params.get('category') === 'folder' ? 'folder' : 'docs';
 
   return (
     <>
-      <Link className={`nav-link ${category === 'all' ? 'active' : 'muted'}`} href="/?category=all">
-        All
-      </Link>
-      <Link className={`nav-link ${category === 'lua' ? 'active' : 'muted'}`} href="/?category=lua">
-        Lua
+      <Link className={`nav-link ${section === 'docs' ? 'active' : 'muted'}`} href="/?category=docs">
+        Docs
       </Link>
       <Link
-        className={`nav-link ${category === 'config' ? 'active' : 'muted'}`}
-        href="/?category=config"
+        className={`nav-link ${section === 'folder' ? 'active' : 'muted'}`}
+        href="/?category=folder"
       >
-        Config
+        Folder
       </Link>
     </>
   );

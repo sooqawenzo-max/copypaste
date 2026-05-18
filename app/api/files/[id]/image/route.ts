@@ -1,10 +1,14 @@
 import { loadDatabase } from '@/lib/db';
 import { streamStoredAsset, streamStoredImage } from '@/lib/files';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const user = await getCurrentUser();
+  if (!user) return new Response('Login required', { status: 403 });
+
   const { id } = await params;
   const url = new URL(request.url);
   const shotId = url.searchParams.get('shot');

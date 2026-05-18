@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { redirect } from 'next/navigation';
 import {
   BarChart3,
+  Download,
   FileCode2,
+  Folder,
   Image as ImageIcon,
-  Lock,
   MessageSquare,
   Sparkles,
   TrendingUp,
@@ -14,7 +16,7 @@ import { Breadcrumbs, CodeFrame, TopNav } from '@/components/Shell';
 import { DotGridBackground } from '@/components/DotGridBackground';
 import { PostComments } from '@/components/PostComments';
 import { ScreenshotGallery } from '@/components/ScreenshotGallery';
-import { getCurrentUser } from '@/lib/auth';
+import { canPublish, getCurrentUser } from '@/lib/auth';
 import { loadDatabase } from '@/lib/db';
 import { readStoredFileText } from '@/lib/files';
 import { DocFile, FileCategory, PublicUser } from '@/lib/types';
@@ -29,29 +31,33 @@ type Props = {
   }>;
 };
 
-type CategoryFilter = FileCategory | 'all';
+type SectionFilter = 'docs' | 'folder';
 
 function normalizeCategory(category?: string): FileCategory {
+  if (category === 'folder') return 'folder';
   return category === 'config' ? 'config' : 'lua';
 }
 
-function normalizeCategoryFilter(category?: string): CategoryFilter {
-  if (category === 'lua' || category === 'config') return category;
-  return 'all';
+function normalizeSection(category?: string): SectionFilter {
+  return category === 'folder' ? 'folder' : 'docs';
 }
 
 function categoryLabel(category: FileCategory) {
+  if (category === 'folder') return 'Folder';
   return category === 'config' ? 'Config' : 'Lua';
 }
 
 function categorySummary(category: FileCategory) {
+  if (category === 'folder') {
+    return 'Bundles with multiple Lua/config files and screenshots.';
+  }
   return category === 'config'
     ? 'Configs with required previews, tags and platform filters.'
     : 'GameSense Lua posts with previews, authors and protected code.';
 }
 
-function filterLabel(category: CategoryFilter) {
-  return category === 'all' ? 'All' : categoryLabel(category);
+function filterLabel(section: SectionFilter) {
+  return section === 'folder' ? 'Folder' : 'Docs';
 }
 
 function isOnline(user: PublicUser) {
@@ -83,8 +89,15 @@ function matchFile(file: DocFile, query: string) {
   return (
     file.title.toLowerCase().includes(q) ||
     file.tags?.some((tag) => tag.toLowerCase().includes(q)) ||
-    file.platform.toLowerCase().includes(q)
+    file.platform.toLowerCase().includes(q) ||
+    file.attachments?.some((asset) => asset.name.toLowerCase().includes(q))
   );
+}
+
+function fileBelongsToSection(file: DocFile, section: SectionFilter) {
+  return section === 'folder'
+    ? file.category === 'folder'
+    : file.category === 'lua' || file.category === 'config';
 }
 
 function matchUser(user: PublicUser, query: string) {
@@ -119,11 +132,14 @@ export default async function Home({ searchParams }: Props) {
   const query = await searchParams;
   const search = (query.q || '').trim();
   const [db, user] = await Promise.all([loadDatabase(), getCurrentUser()]);
+  if (!user) redirect('/login');
+  const canOpenAdmin = canPublish(user.role);
+
   const users = db.users.map(({ passwordHash: _passwordHash, ...entry }) => entry);
   const authorMap = new Map(users.map((entry) => [entry.id, entry]));
   const files = db.files.sort((a, b) => a.title.localeCompare(b.title));
   const current = files.find((file) => file.slug === query.file);
-  const selectedCategory = current?.category || normalizeCategoryFilter(query.category);
+  const selectedSection = current ? (current.category === 'folder' ? 'folder' : 'docs') : normalizeSection(query.category);
   const profileResults = users.filter((entry) => matchUser(entry, search)).slice(0, 6);
   const trendingFiles = [...files]
     .sort((a, b) => fileUpdatedAt(b) - fileUpdatedAt(a))
@@ -131,14 +147,13 @@ export default async function Home({ searchParams }: Props) {
   const latestMember = [...users].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   )[0];
-  const content = current && user ? await readStoredFileText(current) : '';
-  const locked = !user;
+  const content = current && current.category !== 'folder' ? await readStoredFileText(current) : '';
   const onlineUsers = users
     .filter((entry) => isOnline(entry) || entry.id === user?.id)
     .slice(0, 8);
   const visibleFiles = files.filter(
     (file) =>
-      (selectedCategory === 'all' || file.category === selectedCategory) &&
+      fileBelongsToSection(file, selectedSection) &&
       matchFile(file, search)
   );
   const screenshotCount = visibleFiles.reduce(
@@ -170,7 +185,9 @@ export default async function Home({ searchParams }: Props) {
                   key={file.id}
                 >
                   <span className="forum-node-icon" aria-hidden="true">
-                    {file.category === 'config' ? (
+                    {file.category === 'folder' ? (
+                      <Folder size={19} />
+                    ) : file.category === 'config' ? (
                       <ImageIcon size={19} />
                     ) : (
                       <FileCode2 size={19} />
@@ -180,7 +197,7 @@ export default async function Home({ searchParams }: Props) {
                     <strong>{file.title}</strong>
                     <span className="forum-node-meta">
                       <span className={`platform-pill platform-${file.platform}`}>
-                        {file.platform}
+                        {file.category === 'folder' ? `${file.attachments?.length || 0} files` : file.platform}
                       </span>
                       {file.tags?.slice(0, 4).map((tag) => (
                         <em key={tag}>#{tag}</em>
@@ -237,32 +254,28 @@ export default async function Home({ searchParams }: Props) {
                   </div>
                   <div className="forum-heading-actions">
                     <Link
-                      className={selectedCategory === 'all' ? 'primary-action compact' : 'ghost-action'}
-                      href="/?category=all"
+                      className={selectedSection === 'docs' ? 'primary-action compact' : 'ghost-action'}
+                      href="/?category=docs"
                     >
-                      All
+                      Docs
                     </Link>
                     <Link
-                      className={selectedCategory === 'lua' ? 'primary-action compact' : 'ghost-action'}
-                      href="/?category=lua"
+                      className={selectedSection === 'folder' ? 'primary-action compact' : 'ghost-action'}
+                      href="/?category=folder"
                     >
-                      Lua
+                      Folder
                     </Link>
-                    <Link
-                      className={selectedCategory === 'config' ? 'primary-action compact' : 'ghost-action'}
-                      href="/?category=config"
-                    >
-                      Config
-                    </Link>
-                    <Link className="ghost-action" href="/admin">
-                      Publish
-                    </Link>
+                    {canOpenAdmin ? (
+                      <Link className="ghost-action" href="/admin">
+                        Publish
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
 
-                {selectedCategory === 'all'
-                  ? (['lua', 'config'] as FileCategory[]).map((category) => renderForumBlock(category))
-                  : renderForumBlock(selectedCategory)}
+                {selectedSection === 'folder'
+                  ? renderForumBlock('folder')
+                  : (['lua', 'config'] as FileCategory[]).map((category) => renderForumBlock(category))}
 
                 {profileResults.length ? (
                   <div className="forum-block">
@@ -289,7 +302,7 @@ export default async function Home({ searchParams }: Props) {
                 <div className="forum-quick-stats">
                   <span>
                     <MessageSquare size={17} />
-                    {visibleFiles.length} {filterLabel(selectedCategory)} posts
+                    {visibleFiles.length} {filterLabel(selectedSection)} posts
                   </span>
                   <span>
                     <ImageIcon size={17} />
@@ -319,12 +332,6 @@ export default async function Home({ searchParams }: Props) {
                     </div>
                     <h1>{current.title}</h1>
                   </div>
-                  {locked ? (
-                    <Link className="unlock-chip" href="/login">
-                      <Lock size={15} />
-                      unlock
-                    </Link>
-                  ) : null}
                 </div>
 
                 {current.screenshots?.length ? (
@@ -341,15 +348,35 @@ export default async function Home({ searchParams }: Props) {
                   </section>
                 ) : null}
 
-                <section id="example">
-                  <h2>{current.category === 'config' ? 'Config' : 'Lua'}</h2>
-                  <CodeFrame
-                    content={content}
-                    locked={locked}
-                    downloadUrl={user ? `/api/files/${current.id}/content` : undefined}
-                    filename={current.originalName}
-                  />
-                </section>
+                {current.category === 'folder' ? (
+                  <section id="example">
+                    <h2>Files</h2>
+                    <div className="folder-asset-list">
+                      {(current.attachments || []).map((asset) => (
+                        <a
+                          className="folder-asset"
+                          href={`/api/files/${current.id}/assets/${asset.id}`}
+                          download={asset.name}
+                          key={asset.id}
+                        >
+                          <FileCode2 size={17} />
+                          <span>{asset.name}</span>
+                          <em>{formatFileSize(asset.size || 0)}</em>
+                          <Download size={15} />
+                        </a>
+                      ))}
+                    </div>
+                  </section>
+                ) : (
+                  <section id="example">
+                    <h2>{current.category === 'config' ? 'Config' : 'Lua'}</h2>
+                    <CodeFrame
+                      content={content}
+                      downloadUrl={`/api/files/${current.id}/content`}
+                      filename={current.originalName}
+                    />
+                  </section>
+                )}
 
                 <section id="arguments">
                   <h2>Properties</h2>
@@ -387,7 +414,7 @@ export default async function Home({ searchParams }: Props) {
 
         <aside className="toc">
           {current?.screenshots?.length ? <a href="#preview">Preview</a> : null}
-          {current ? <a href="#example">{current.category === 'config' ? 'Config' : 'Lua'}</a> : null}
+          {current ? <a href="#example">{current.category === 'folder' ? 'Files' : current.category === 'config' ? 'Config' : 'Lua'}</a> : null}
           {current ? <a href="#arguments">Properties</a> : null}
           {current ? <a href="#comments">Comments</a> : null}
           {!current ? (
@@ -427,10 +454,10 @@ export default async function Home({ searchParams }: Props) {
                   Forum statistics
                 </h3>
                 <dl className="forum-stat-list">
-                  <dt>Lua</dt>
-                  <dd>{files.filter((file) => file.category === 'lua').length}</dd>
-                  <dt>Config</dt>
-                  <dd>{files.filter((file) => file.category === 'config').length}</dd>
+                  <dt>Docs</dt>
+                  <dd>{files.filter((file) => file.category === 'lua' || file.category === 'config').length}</dd>
+                  <dt>Folder</dt>
+                  <dd>{files.filter((file) => file.category === 'folder').length}</dd>
                   <dt>Members</dt>
                   <dd>{users.length}</dd>
                   <dt>Latest member</dt>

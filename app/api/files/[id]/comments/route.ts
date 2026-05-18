@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { canPublish, getCurrentUser } from '@/lib/auth';
 import { addAuditLog, loadDatabase, saveDatabase } from '@/lib/db';
 
 export async function POST(
@@ -9,6 +9,10 @@ export async function POST(
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'Login required' }, { status: 401 });
+  }
+
+  if (!canPublish(user.role)) {
+    return NextResponse.json({ error: 'Staff only' }, { status: 403 });
   }
 
   const { id } = await params;

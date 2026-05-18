@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { DotGridBackground } from '@/components/DotGridBackground';
 import { ProfilePanel } from '@/components/ProfilePanel';
 import { TopNav } from '@/components/Shell';
@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 export default async function UserPage({ params }: { params: Promise<{ uid: string }> }) {
   const { uid } = await params;
   const [db, currentUser] = await Promise.all([loadDatabase(), getCurrentUser()]);
+  if (!currentUser) redirect('/login');
   const user = db.users.find((entry) => String(entry.uid) === uid);
   if (!user) notFound();
 
